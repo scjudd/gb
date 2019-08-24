@@ -39,11 +39,11 @@ pub enum Direction {
     ToRegister,
 }
 
-pub struct LoadHighRAM {
+pub struct LoadHigh {
     pub direction: Direction,
 }
 
-impl Instruction for LoadHighRAM {
+impl Instruction for LoadHigh {
     fn execute(&self, reg: &mut Registers, bus: &mut AddressBus, _state: &mut ExecState) {
         let addr = 0xff00 + (bus.read_8bit(reg.get_pc_offset(1)) as u16);
         reg.inc_pc(2);

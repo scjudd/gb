@@ -242,7 +242,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0xdd */ &NOP,
     /* 0xde */ &NOP,
     /* 0xdf */ &NOP,
-    /* 0xe0 */ &LoadHighRAM {
+    /* 0xe0 */ &LoadHigh {
         direction: Direction::ToBus,
     },
     /* 0xe1 */ &NOP,
@@ -260,7 +260,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0xed */ &NOP,
     /* 0xee */ &NOP,
     /* 0xef */ &NOP,
-    /* 0xf0 */ &LoadHighRAM {
+    /* 0xf0 */ &LoadHigh {
         direction: Direction::ToRegister,
     },
     /* 0xf1 */ &NOP,
