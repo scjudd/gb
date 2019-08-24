@@ -21,7 +21,7 @@ fn main() {
 
     let mut state = ExecState::new();
     let mut reg = Registers::new();
-    let mut bus = AddressBus::load_rom_bank_0(&args[1]);
+    let mut bus = AddressBus::load_rom(&args[1]);
 
     reg.set_pc(0x0100);
 

@@ -1,8 +1,12 @@
+use std::fs::File;
+use std::io::Read;
+
+/// An (incomplete) implementation of the GameBoy's address bus.
+///
+/// Exists in order to provide the GameBoy's CPU the unified interface it needs to access it's
+/// various memories and peripherals.
 pub struct AddressBus {
-    // Because this is a static array, we can't do any sort of ROM/RAM banking, so this is useless
-    // for most games, but a good quick way to load up a real ROM and start running until it
-    // crashes.
-    rom: [u8; 0x4000],
+    rom: Vec<u8>,
     hram: [u8; 0x7f],
 }
 
@@ -23,19 +27,12 @@ impl AddressBus {
     // | ffff  | ffff  | Interrupts Enable Register (IE)
     // http://gbdev.gg8.se/wiki/articles/Memory_Map
 
-    /// Opens a ROM file and reads the first 0x4000 bytes (ROM bank 00) into memory, returning an
-    /// AddressBus
-    ///
-    /// This is not a useful interface for running an actual ROM dump unless the ROM does not use
-    /// any sort of memory paging. It's a half-assed implementation, so that I can spend cycles on
-    /// more interesting things.
-    pub fn load_rom_bank_0(rom_path: &str) -> AddressBus {
-        use std::fs::File;
-        use std::io::Read;
+    /// Opens a ROM file and reads it into memory, returning an AddressBus
+    pub fn load_rom(rom_path: &str) -> AddressBus {
         let mut f = File::open(rom_path).expect("could not open ROM");
 
-        let mut rom = [0; 0x4000];
-        f.read(&mut rom)
+        let mut rom = Vec::new();
+        f.read_to_end(&mut rom)
             .expect("couldn't read ROM bank 00 into array");
 
         let hram = [0; 0x7f];
@@ -44,7 +41,7 @@ impl AddressBus {
     }
 
     pub fn read_8bit(&self, addr: u16) -> u8 {
-        if addr <= 0x4000 {
+        if addr <= 0x8000 {
             return self.rom[addr as usize];
         }
 
@@ -65,8 +62,11 @@ impl AddressBus {
     }
 
     pub fn write_8bit(&mut self, addr: u16, value: u8) {
-        if addr <= 0x4000 {
-            return;
+        if addr <= 0x8000 {
+            // When we delegate to a Cart module that implements a given MBC, it can perform
+            // whatever sort of ROM/RAM bank switching on writes into this address space. For now,
+            // we'll just panic.
+            panic!("Attempted to write to read-only memory, and ROM/RAM bank switching is not yet implemented.");
         }
 
         if addr >= 0xff80 && addr <= 0xfffe {
