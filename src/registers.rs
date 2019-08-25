@@ -58,10 +58,10 @@ impl Display for Reg16 {
 
 #[derive(Copy, Clone)]
 pub enum Flag {
-    Z,
-    N,
-    H,
-    C,
+    Z = 0b1000_0000,
+    N = 0b0100_0000,
+    H = 0b0010_0000,
+    C = 0b0001_0000,
 }
 
 impl Display for Flag {
@@ -167,28 +167,14 @@ impl Registers {
     }
 
     pub fn get_flag(&self, flag: Flag) -> bool {
-        let bitmask = match flag {
-            Flag::Z => 0b10000000,
-            Flag::N => 0b01000000,
-            Flag::H => 0b00100000,
-            Flag::C => 0b00010000,
-        };
-
-        self.f & bitmask == bitmask
+        self.f & (flag as u8) == (flag as u8)
     }
 
     pub fn set_flag(&mut self, flag: Flag, set: bool) {
-        let bitmask = match flag {
-            Flag::Z => 0b10000000,
-            Flag::N => 0b01000000,
-            Flag::H => 0b00100000,
-            Flag::C => 0b00010000,
-        };
-
         if set {
-            self.f |= bitmask;
+            self.f |= (flag as u8);
         } else {
-            self.f &= !bitmask;
+            self.f &= !(flag as u8);
         }
     }
 
