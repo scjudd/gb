@@ -20,8 +20,6 @@ fn main() {
     let mut reg = Registers::new();
     let mut bus = AddressBus::load_rom(&args[1]);
 
-    reg.set_pc(0x0100);
-
     loop {
         next(&mut reg, &mut bus);
     }
