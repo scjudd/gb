@@ -206,6 +206,22 @@ impl Registers {
         self.pc = value;
     }
 
+    pub fn get_sp_offset(&self, offset: i8) -> u16 {
+        ((self.sp as i16).wrapping_add(offset as i16)) as u16
+    }
+
+    pub fn set_sp_offset(&mut self, offset: i8) {
+        self.sp = self.get_sp_offset(offset);
+    }
+
+    pub fn get_sp(&self) -> u16 {
+        self.sp
+    }
+
+    pub fn set_sp(&mut self, value: u16) {
+        self.sp = value;
+    }
+
     // While this functionality could be achieved with `self.set_pc_offset`, this seems like it
     // ought to be faster since it doesn't do any type casting. Need to make sure that's actually
     // the case.

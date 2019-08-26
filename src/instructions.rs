@@ -168,6 +168,21 @@ impl Instruction for JumpRelative {
     }
 }
 
+pub struct ReturnInterrupt;
+
+impl Instruction for ReturnInterrupt {
+    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
+        reg.inc_pc(1);
+        reg.set_ime(true);
+        reg.set_pc(bus.read_16bit(reg.get_sp()));
+        reg.set_sp_offset(2);
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+        "RETI".to_string()
+    }
+}
+
 pub struct CompareImmediate;
 
 impl Instruction for CompareImmediate {

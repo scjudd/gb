@@ -233,7 +233,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0xd6 */ &NOP,
     /* 0xd7 */ &NOP,
     /* 0xd8 */ &NOP,
-    /* 0xd9 */ &NOP,
+    /* 0xd9 */ &ReturnInterrupt,
     /* 0xda */ &JumpImmediate {
         condition: Some(Condition::C),
     },
