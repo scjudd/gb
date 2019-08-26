@@ -300,6 +300,37 @@ impl Instruction for Add {
     }
 }
 
+pub struct AddWithCarry {
+    pub reg: Reg8,
+}
+
+impl Instruction for AddWithCarry {
+    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
+        reg.inc_pc(1);
+        let acc = reg.get_8bit(Reg8::A);
+        let (amount, carry) = reg
+            .get_8bit(self.reg)
+            .overflowing_add(match reg.get_flag(Flag::C) {
+                true => 1,
+                false => 0,
+            });
+        let (val, carry) = match carry {
+            true => (acc.wrapping_add(amount), true),
+            false => acc.overflowing_add(amount),
+        };
+        let halfcarry = ((acc & 0x0f) + (amount & 0x0f)) & 0x10 == 0x10;
+        reg.set_8bit(Reg8::A, val);
+        reg.set_flag(Flag::Z, val == 0);
+        reg.set_flag(Flag::N, false);
+        reg.set_flag(Flag::H, halfcarry);
+        reg.set_flag(Flag::C, carry);
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+        format!("ADC {}", self.reg)
+    }
+}
+
 pub struct ExclusiveOr {
     pub reg: Reg8,
 }
