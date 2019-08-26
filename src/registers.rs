@@ -174,7 +174,7 @@ impl Registers {
 
     pub fn set_flag(&mut self, flag: Flag, set: bool) {
         if set {
-            self.f |= (flag as u8);
+            self.f |= flag as u8;
         } else {
             self.f &= !(flag as u8);
         }
