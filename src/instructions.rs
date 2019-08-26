@@ -198,6 +198,30 @@ impl Instruction for JumpRelative {
     }
 }
 
+pub struct Call {
+    pub condition: Option<Condition>,
+}
+
+impl Instruction for Call {
+    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
+        let addr = bus.read_16bit(reg.get_pc_offset(1));
+        reg.inc_pc(3);
+        if self.condition.map_or(true, |c| c.is_met(reg)) {
+            reg.set_sp_offset(-2);
+            bus.write_16bit(reg.get_sp(), reg.get_pc());
+            reg.set_pc(addr);
+        }
+    }
+
+    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+        let call_addr = bus.read_16bit(addr.wrapping_add(1));
+        match self.condition {
+            None => format!("CALL ${:04x}", call_addr),
+            Some(cond) => format!("CALL {},${:04x}", cond, call_addr),
+        }
+    }
+}
+
 pub struct Return {
     pub condition: Option<Condition>,
 }
