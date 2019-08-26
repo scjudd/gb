@@ -85,6 +85,36 @@ impl Instruction for Load8BitImmediate {
     }
 }
 
+pub struct Load8BitIndirect {
+    pub direction: Direction,
+    pub addr_reg: Reg16,
+    pub reg: Reg8,
+}
+
+impl Instruction for Load8BitIndirect {
+    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
+        let addr = reg.get_16bit(self.addr_reg);
+        reg.inc_pc(2);
+        match self.direction {
+            Direction::ToBus => {
+                let val = reg.get_8bit(self.reg);
+                bus.write_8bit(addr, val);
+            }
+            Direction::ToRegister => {
+                let val = bus.read_8bit(addr);
+                reg.set_8bit(self.reg, val);
+            }
+        }
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+        match self.direction {
+            Direction::ToBus => format!("LD ({}),{}", self.addr_reg, self.reg),
+            Direction::ToRegister => format!("LD {},({})", self.reg, self.addr_reg),
+        }
+    }
+}
+
 pub struct LoadHigh {
     pub direction: Direction,
 }

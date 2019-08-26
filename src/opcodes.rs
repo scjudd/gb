@@ -4,7 +4,12 @@ use crate::registers::{Reg16, Reg8};
 pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x00 */ &NOP,
     /* 0x01 */ &Load16BitImmediate { reg: Reg16::BC },
-    /* 0x02 */ &NOP,
+    /* 0x02 */
+    &Load8BitIndirect {
+        direction: Direction::ToBus,
+        addr_reg: Reg16::BC,
+        reg: Reg8::A,
+    },
     /* 0x03 */ &NOP,
     /* 0x04 */ &NOP,
     /* 0x05 */ &NOP,
@@ -12,7 +17,12 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x07 */ &NOP,
     /* 0x08 */ &NOP,
     /* 0x09 */ &NOP,
-    /* 0x0a */ &NOP,
+    /* 0x0a */
+    &Load8BitIndirect {
+        direction: Direction::ToRegister,
+        addr_reg: Reg16::BC,
+        reg: Reg8::A,
+    },
     /* 0x0b */ &NOP,
     /* 0x0c */ &NOP,
     /* 0x0d */ &NOP,
@@ -20,7 +30,12 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x0f */ &NOP,
     /* 0x10 */ &NOP,
     /* 0x11 */ &Load16BitImmediate { reg: Reg16::DE },
-    /* 0x12 */ &NOP,
+    /* 0x12 */
+    &Load8BitIndirect {
+        direction: Direction::ToBus,
+        addr_reg: Reg16::DE,
+        reg: Reg8::A,
+    },
     /* 0x13 */ &NOP,
     /* 0x14 */ &NOP,
     /* 0x15 */ &NOP,
@@ -28,7 +43,12 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x17 */ &NOP,
     /* 0x18 */ &JumpRelative { condition: None },
     /* 0x19 */ &NOP,
-    /* 0x1a */ &NOP,
+    /* 0x1a */
+    &Load8BitIndirect {
+        direction: Direction::ToRegister,
+        addr_reg: Reg16::DE,
+        reg: Reg8::A,
+    },
     /* 0x1b */ &NOP,
     /* 0x1c */ &NOP,
     /* 0x1d */ &NOP,
@@ -98,7 +118,12 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
         dst: Reg8::B,
         src: Reg8::L,
     },
-    /* 0x46 */ &NOP,
+    /* 0x46 */
+    &Load8BitIndirect {
+        direction: Direction::ToRegister,
+        addr_reg: Reg16::HL,
+        reg: Reg8::B,
+    },
     /* 0x47 */ &Load8Bit {
         dst: Reg8::B,
         src: Reg8::A,
@@ -127,7 +152,12 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
         dst: Reg8::C,
         src: Reg8::L,
     },
-    /* 0x4e */ &NOP,
+    /* 0x4e */
+    &Load8BitIndirect {
+        direction: Direction::ToRegister,
+        addr_reg: Reg16::HL,
+        reg: Reg8::C,
+    },
     /* 0x4f */ &Load8Bit {
         dst: Reg8::C,
         src: Reg8::A,
@@ -156,7 +186,12 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
         dst: Reg8::D,
         src: Reg8::L,
     },
-    /* 0x56 */ &NOP,
+    /* 0x56 */
+    &Load8BitIndirect {
+        direction: Direction::ToRegister,
+        addr_reg: Reg16::HL,
+        reg: Reg8::D,
+    },
     /* 0x57 */ &Load8Bit {
         dst: Reg8::D,
         src: Reg8::A,
@@ -185,7 +220,12 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
         dst: Reg8::E,
         src: Reg8::L,
     },
-    /* 0x5e */ &NOP,
+    /* 0x5e */
+    &Load8BitIndirect {
+        direction: Direction::ToRegister,
+        addr_reg: Reg16::HL,
+        reg: Reg8::E,
+    },
     /* 0x5f */ &Load8Bit {
         dst: Reg8::E,
         src: Reg8::A,
@@ -214,7 +254,12 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
         dst: Reg8::H,
         src: Reg8::L,
     },
-    /* 0x66 */ &NOP,
+    /* 0x66 */
+    &Load8BitIndirect {
+        direction: Direction::ToRegister,
+        addr_reg: Reg16::HL,
+        reg: Reg8::H,
+    },
     /* 0x67 */ &Load8Bit {
         dst: Reg8::H,
         src: Reg8::A,
@@ -243,19 +288,59 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
         dst: Reg8::L,
         src: Reg8::L,
     },
-    /* 0x6e */ &NOP,
+    /* 0x6e */
+    &Load8BitIndirect {
+        direction: Direction::ToRegister,
+        addr_reg: Reg16::HL,
+        reg: Reg8::L,
+    },
     /* 0x6f */ &Load8Bit {
         dst: Reg8::L,
         src: Reg8::A,
     },
-    /* 0x70 */ &NOP,
-    /* 0x71 */ &NOP,
-    /* 0x72 */ &NOP,
-    /* 0x73 */ &NOP,
-    /* 0x74 */ &NOP,
-    /* 0x75 */ &NOP,
+    /* 0x70 */
+    &Load8BitIndirect {
+        direction: Direction::ToBus,
+        addr_reg: Reg16::HL,
+        reg: Reg8::B,
+    },
+    /* 0x71 */
+    &Load8BitIndirect {
+        direction: Direction::ToBus,
+        addr_reg: Reg16::HL,
+        reg: Reg8::C,
+    },
+    /* 0x72 */
+    &Load8BitIndirect {
+        direction: Direction::ToBus,
+        addr_reg: Reg16::HL,
+        reg: Reg8::D,
+    },
+    /* 0x73 */
+    &Load8BitIndirect {
+        direction: Direction::ToBus,
+        addr_reg: Reg16::HL,
+        reg: Reg8::E,
+    },
+    /* 0x74 */
+    &Load8BitIndirect {
+        direction: Direction::ToBus,
+        addr_reg: Reg16::HL,
+        reg: Reg8::H,
+    },
+    /* 0x75 */
+    &Load8BitIndirect {
+        direction: Direction::ToBus,
+        addr_reg: Reg16::HL,
+        reg: Reg8::L,
+    },
     /* 0x76 */ &NOP,
-    /* 0x77 */ &NOP,
+    /* 0x77 */
+    &Load8BitIndirect {
+        direction: Direction::ToBus,
+        addr_reg: Reg16::HL,
+        reg: Reg8::A,
+    },
     /* 0x78 */ &Load8Bit {
         dst: Reg8::A,
         src: Reg8::B,
@@ -280,7 +365,12 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
         dst: Reg8::A,
         src: Reg8::L,
     },
-    /* 0x7e */ &NOP,
+    /* 0x7e */
+    &Load8BitIndirect {
+        direction: Direction::ToRegister,
+        addr_reg: Reg16::HL,
+        reg: Reg8::A,
+    },
     /* 0x7f */ &Load8Bit {
         dst: Reg8::A,
         src: Reg8::A,
