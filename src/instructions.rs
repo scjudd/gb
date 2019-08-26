@@ -419,6 +419,26 @@ impl Instruction for Increment8Bit {
     }
 }
 
+pub struct Decrement8Bit {
+    pub reg: Reg8,
+}
+
+impl Instruction for Decrement8Bit {
+    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
+        reg.inc_pc(1);
+        let last = reg.get_8bit(self.reg);
+        let val = last.wrapping_sub(1);
+        reg.set_8bit(self.reg, val);
+        reg.set_flag(Flag::Z, val == 0);
+        reg.set_flag(Flag::N, true);
+        reg.set_flag(Flag::H, (last & 0x0f) < (val & 0x0f));
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+        format!("DEC {}", self.reg)
+    }
+}
+
 pub struct Increment16Bit {
     pub reg: Reg16,
 }
