@@ -277,6 +277,29 @@ impl Instruction for CompareImmediate {
     }
 }
 
+pub struct Add {
+    pub reg: Reg8,
+}
+
+impl Instruction for Add {
+    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
+        let acc = reg.get_8bit(Reg8::A);
+        let amount = reg.get_8bit(self.reg);
+        let (val, carry) = acc.overflowing_add(amount);
+        let halfcarry = ((acc & 0x0f) + (amount & 0x0f)) & 0x10 == 0x10;
+        reg.inc_pc(1);
+        reg.set_8bit(Reg8::A, val);
+        reg.set_flag(Flag::Z, val == 0);
+        reg.set_flag(Flag::N, false);
+        reg.set_flag(Flag::H, halfcarry);
+        reg.set_flag(Flag::C, carry);
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+        format!("ADD {}", self.reg)
+    }
+}
+
 pub struct ExclusiveOr {
     pub reg: Reg8,
 }
