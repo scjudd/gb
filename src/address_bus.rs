@@ -3,7 +3,7 @@ use std::io::Read;
 
 /// An (incomplete) implementation of the GameBoy's address bus.
 ///
-/// Exists in order to provide the GameBoy's CPU the unified interface it needs to access it's
+/// Exists in order to provide the GameBoy's CPU the unified interface it needs to access its
 /// various memories and peripherals.
 pub struct AddressBus {
     rom: Vec<u8>,
@@ -33,7 +33,7 @@ impl AddressBus {
 
         let mut rom = Vec::new();
         f.read_to_end(&mut rom)
-            .expect("couldn't read ROM bank 00 into array");
+            .expect("couldn't read ROM into Vec<u8>");
 
         let hram = [0; 0x7f];
 
