@@ -57,13 +57,13 @@ pub struct Load8Bit {
 }
 
 impl Instruction for Load8Bit {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
+    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
         reg.inc_pc(2);
         let val = reg.get_8bit(self.src);
         reg.set_8bit(self.dst, val);
     }
 
-    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
         format!("LD {},{}", self.dst, self.src)
     }
 }
