@@ -202,7 +202,9 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0xbd */ &NOP,
     /* 0xbe */ &NOP,
     /* 0xbf */ &NOP,
-    /* 0xc0 */ &NOP,
+    /* 0xc0 */ &Return {
+        condition: Some(Condition::NZ),
+    },
     /* 0xc1 */ &NOP,
     /* 0xc2 */ &JumpImmediate {
         condition: Some(Condition::NZ),
@@ -212,8 +214,10 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0xc5 */ &NOP,
     /* 0xc6 */ &NOP,
     /* 0xc7 */ &NOP,
-    /* 0xc8 */ &NOP,
-    /* 0xc9 */ &NOP,
+    /* 0xc8 */ &Return {
+        condition: Some(Condition::Z),
+    },
+    /* 0xc9 */ &Return { condition: None },
     /* 0xca */ &JumpImmediate {
         condition: Some(Condition::Z),
     },
@@ -223,7 +227,9 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0xce */ &NOP,
     /* 0xcf */ &NOP,
     /* 0xd0 */ &NOP,
-    /* 0xd1 */ &NOP,
+    /* 0xd1 */ &Return {
+        condition: Some(Condition::NC),
+    },
     /* 0xd2 */ &JumpImmediate {
         condition: Some(Condition::NC),
     },
@@ -232,7 +238,9 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0xd5 */ &NOP,
     /* 0xd6 */ &NOP,
     /* 0xd7 */ &NOP,
-    /* 0xd8 */ &NOP,
+    /* 0xd8 */ &Return {
+        condition: Some(Condition::C),
+    },
     /* 0xd9 */ &ReturnInterrupt,
     /* 0xda */ &JumpImmediate {
         condition: Some(Condition::C),

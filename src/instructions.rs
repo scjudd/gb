@@ -168,6 +168,27 @@ impl Instruction for JumpRelative {
     }
 }
 
+pub struct Return {
+    pub condition: Option<Condition>,
+}
+
+impl Instruction for Return {
+    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
+        reg.inc_pc(1);
+        if self.condition.map_or(true, |c| c.is_met(reg)) {
+            reg.set_pc(bus.read_16bit(reg.get_sp()));
+            reg.set_sp_offset(2);
+        }
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+        match self.condition {
+            None => "RET".to_string(),
+            Some(cond) => format!("RET {}", cond),
+        }
+    }
+}
+
 pub struct ReturnInterrupt;
 
 impl Instruction for ReturnInterrupt {
