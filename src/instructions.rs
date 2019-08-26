@@ -1,17 +1,16 @@
 use crate::address_bus::AddressBus;
-use crate::exec_state::ExecState;
 use crate::registers::{Flag, Reg8, Registers};
 use std::fmt::{self, Display, Formatter};
 
 pub trait Instruction {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus, state: &mut ExecState);
+    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus);
     fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String;
 }
 
 pub struct NOP;
 
 impl Instruction for NOP {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus, _state: &mut ExecState) {
+    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
         reg.inc_pc(1)
     }
 
@@ -23,9 +22,9 @@ impl Instruction for NOP {
 pub struct DisableInterrupts;
 
 impl Instruction for DisableInterrupts {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus, state: &mut ExecState) {
+    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
         reg.inc_pc(1);
-        state.interrupts_enabled = false;
+        reg.set_ime(false);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -44,7 +43,7 @@ pub struct LoadHigh {
 }
 
 impl Instruction for LoadHigh {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus, _state: &mut ExecState) {
+    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
         let addr = 0xff00 + (bus.read_8bit(reg.get_pc_offset(1)) as u16);
         reg.inc_pc(2);
         match self.direction {
@@ -107,7 +106,7 @@ pub struct JumpImmediate {
 }
 
 impl Instruction for JumpImmediate {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus, _state: &mut ExecState) {
+    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
         let addr = bus.read_16bit(reg.get_pc_offset(1));
         reg.inc_pc(3);
         if self.condition.map_or(true, |c| c.is_met(reg)) {
@@ -129,7 +128,7 @@ pub struct JumpRelative {
 }
 
 impl Instruction for JumpRelative {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus, _state: &mut ExecState) {
+    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
         let offset = bus.read_8bit(reg.get_pc_offset(1)) as i8;
         reg.inc_pc(2);
         if self.condition.map_or(true, |c| c.is_met(reg)) {
@@ -155,7 +154,7 @@ impl Instruction for JumpRelative {
 pub struct CompareImmediate;
 
 impl Instruction for CompareImmediate {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus, _state: &mut ExecState) {
+    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
         let acc = reg.get_8bit(Reg8::A);
         let val = bus.read_8bit(reg.get_pc_offset(1));
         reg.inc_pc(2);
@@ -176,7 +175,7 @@ pub struct ExclusiveOr {
 }
 
 impl Instruction for ExclusiveOr {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus, _state: &mut ExecState) {
+    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
         let acc = reg.get_8bit(Reg8::A);
         let val = reg.get_8bit(self.reg);
         reg.inc_pc(1);

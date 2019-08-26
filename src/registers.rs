@@ -90,6 +90,7 @@ pub struct Registers {
     l: u8,
     sp: u16,
     pc: u16,
+    ime: bool,
 }
 
 impl Registers {
@@ -105,6 +106,7 @@ impl Registers {
             l: 0,
             sp: 0,
             pc: 0,
+            ime: true,
         }
     }
 
@@ -176,6 +178,16 @@ impl Registers {
         } else {
             self.f &= !(flag as u8);
         }
+    }
+
+    /// Return the interrupt "master enable" state
+    pub fn get_ime(&self) -> bool {
+        self.ime
+    }
+
+    /// Set the interrupt "master enable" state
+    pub fn set_ime(&mut self, set: bool) {
+        self.ime = set;
     }
 
     pub fn get_pc_offset(&self, offset: i8) -> u16 {
