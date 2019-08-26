@@ -7,7 +7,9 @@ use std::io::Read;
 /// various memories and peripherals.
 pub struct AddressBus {
     rom: Vec<u8>,
+    io_registers: [u8; 0x80],
     hram: [u8; 0x7f],
+    ie_register: u8,
 }
 
 impl AddressBus {
@@ -35,9 +37,12 @@ impl AddressBus {
         f.read_to_end(&mut rom)
             .expect("couldn't read ROM into Vec<u8>");
 
-        let hram = [0; 0x7f];
-
-        AddressBus { rom, hram }
+        AddressBus {
+            rom,
+            io_registers: [0; 0x80],
+            hram: [0; 0x7f],
+            ie_register: 0,
+        }
     }
 
     pub fn read_8bit(&self, addr: u16) -> u8 {
@@ -45,8 +50,16 @@ impl AddressBus {
             return self.rom[addr as usize];
         }
 
+        if addr >= 0xff00 && addr <= 0xff7f {
+            return self.io_registers[(addr - 0xff00) as usize];
+        }
+
         if addr >= 0xff80 && addr <= 0xfffe {
             return self.hram[(addr - 0xff80) as usize];
+        }
+
+        if addr == 0xffff {
+            return self.ie_register;
         }
 
         panic!(
@@ -69,8 +82,18 @@ impl AddressBus {
             panic!("Attempted to write to read-only memory, and ROM/RAM bank switching is not yet implemented.");
         }
 
+        if addr >= 0xff00 && addr <= 0xff7f {
+            self.io_registers[(addr - 0xff00) as usize] = value;
+            return;
+        }
+
         if addr >= 0xff80 && addr <= 0xfffe {
             self.hram[(addr - 0xff80) as usize] = value;
+            return;
+        }
+
+        if addr == 0xffff {
+            self.ie_register = value;
             return;
         }
 
