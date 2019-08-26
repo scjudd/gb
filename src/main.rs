@@ -25,7 +25,7 @@ fn main() {
 
     reg.set_pc(0x0100);
 
-    for _ in 0..0x10 {
+    loop {
         next(&mut reg, &mut bus, &mut state);
     }
 }
