@@ -260,9 +260,13 @@ pub struct ExclusiveOr {
 impl Instruction for ExclusiveOr {
     fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
         let acc = reg.get_8bit(Reg8::A);
-        let val = reg.get_8bit(self.reg);
+        let val = acc ^ reg.get_8bit(self.reg);
         reg.inc_pc(1);
-        reg.set_8bit(Reg8::A, acc ^ val);
+        reg.set_8bit(Reg8::A, val);
+        reg.set_flag(Flag::Z, val == 0);
+        reg.set_flag(Flag::N, false);
+        reg.set_flag(Flag::H, false);
+        reg.set_flag(Flag::C, false);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
