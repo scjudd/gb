@@ -38,6 +38,23 @@ pub enum Direction {
     ToRegister,
 }
 
+pub struct Load8BitImmediate {
+    pub reg: Reg8,
+}
+
+impl Instruction for Load8BitImmediate {
+    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
+        let val = bus.read_8bit(reg.get_pc_offset(1));
+        reg.inc_pc(2);
+        reg.set_8bit(self.reg, val);
+    }
+
+    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+        let val = bus.read_8bit(addr.wrapping_add(1));
+        format!("LD {},${:02x}", self.reg, val)
+    }
+}
+
 pub struct LoadHigh {
     pub direction: Direction,
 }
