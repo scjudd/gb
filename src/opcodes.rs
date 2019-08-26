@@ -1,9 +1,9 @@
 use crate::instructions::*;
-use crate::registers::Reg8;
+use crate::registers::{Reg16, Reg8};
 
 pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x00 */ &NOP,
-    /* 0x01 */ &NOP,
+    /* 0x01 */ &Load16BitImmediate { reg: Reg16::BC },
     /* 0x02 */ &NOP,
     /* 0x03 */ &NOP,
     /* 0x04 */ &NOP,
@@ -19,7 +19,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x0e */ &Load8BitImmediate { reg: Reg8::C },
     /* 0x0f */ &NOP,
     /* 0x10 */ &NOP,
-    /* 0x11 */ &NOP,
+    /* 0x11 */ &Load16BitImmediate { reg: Reg16::DE },
     /* 0x12 */ &NOP,
     /* 0x13 */ &NOP,
     /* 0x14 */ &NOP,
@@ -37,7 +37,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x20 */ &JumpRelative {
         condition: Some(Condition::NZ),
     },
-    /* 0x21 */ &NOP,
+    /* 0x21 */ &Load16BitImmediate { reg: Reg16::HL },
     /* 0x22 */ &NOP,
     /* 0x23 */ &NOP,
     /* 0x24 */ &NOP,
@@ -57,7 +57,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x30 */ &JumpRelative {
         condition: Some(Condition::NC),
     },
-    /* 0x31 */ &NOP,
+    /* 0x31 */ &Load16BitImmediate { reg: Reg16::SP },
     /* 0x32 */ &NOP,
     /* 0x33 */ &NOP,
     /* 0x34 */ &NOP,

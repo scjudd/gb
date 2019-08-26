@@ -1,5 +1,5 @@
 use crate::address_bus::AddressBus;
-use crate::registers::{Flag, Reg8, Registers};
+use crate::registers::{Flag, Reg16, Reg8, Registers};
 use std::fmt::{self, Display, Formatter};
 
 pub trait Instruction {
@@ -111,6 +111,23 @@ impl Instruction for LoadHigh {
             Direction::ToBus => format!("LDH (${:02x}),A", offset),
             Direction::ToRegister => format!("LDH A,(${:02x})", offset),
         }
+    }
+}
+
+pub struct Load16BitImmediate {
+    pub reg: Reg16,
+}
+
+impl Instruction for Load16BitImmediate {
+    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
+        let val = bus.read_16bit(reg.get_pc_offset(1));
+        reg.inc_pc(3);
+        reg.set_16bit(self.reg, val);
+    }
+
+    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+        let val = bus.read_16bit(addr.wrapping_add(1));
+        format!("LD {},${:04x}", self.reg, val)
     }
 }
 
