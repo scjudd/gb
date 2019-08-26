@@ -428,7 +428,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0xf8 */ &NOP,
     /* 0xf9 */ &NOP,
     /* 0xfa */ &NOP,
-    /* 0xfb */ &NOP,
+    /* 0xfb */ &EnableInterrupts,
     /* 0xfc */ &NOP,
     /* 0xfd */ &NOP,
     /* 0xfe */ &CompareImmediate,

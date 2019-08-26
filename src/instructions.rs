@@ -32,6 +32,19 @@ impl Instruction for DisableInterrupts {
     }
 }
 
+pub struct EnableInterrupts;
+
+impl Instruction for EnableInterrupts {
+    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
+        reg.inc_pc(1);
+        reg.set_ime(true);
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+        "EI".to_string()
+    }
+}
+
 #[derive(Copy, Clone)]
 pub enum Direction {
     ToBus,
