@@ -545,12 +545,6 @@ impl Instruction for Increment16Bit {
         let last = reg.get_16bit(self.reg);
         let val = last.wrapping_add(1);
         reg.set_16bit(self.reg, val);
-        reg.set_flag(Flag::Z, val == 0);
-        reg.set_flag(Flag::N, false);
-        reg.set_flag(
-            Flag::H,
-            ((last & 0x00ff) + (val & 0x00ff)) & 0x0100 == 0x0100,
-        );
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
