@@ -65,6 +65,30 @@ impl Instruction for RotateLeftCircularAccumulator {
     }
 }
 
+pub struct RotateLeftAccumulator;
+
+impl Instruction for RotateLeftAccumulator {
+    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
+        reg.inc_pc(1);
+        let last = reg.get_8bit(Reg8::A);
+        let carry = (last & 0b1000_0000) >> 7;
+        let rotated_bit = match reg.get_flag(Flag::C) {
+            true => 1,
+            false => 0,
+        };
+        let val = (last << 1) & rotated_bit;
+        reg.set_8bit(Reg8::A, val);
+        reg.set_flag(Flag::Z, false);
+        reg.set_flag(Flag::N, false);
+        reg.set_flag(Flag::H, false);
+        reg.set_flag(Flag::C, carry == 1);
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+        "RLA".to_string()
+    }
+}
+
 #[derive(Copy, Clone)]
 pub enum Direction {
     ToBus,

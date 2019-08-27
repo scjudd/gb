@@ -40,7 +40,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x14 */ &Increment8Bit { reg: Reg8::D },
     /* 0x15 */ &Decrement8Bit { reg: Reg8::D },
     /* 0x16 */ &Load8BitImmediate { reg: Reg8::D },
-    /* 0x17 */ &NOP,
+    /* 0x17 */ &RotateLeftAccumulator,
     /* 0x18 */ &JumpRelative { condition: None },
     /* 0x19 */ &NOP,
     /* 0x1a */
