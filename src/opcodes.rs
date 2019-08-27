@@ -62,7 +62,12 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
         condition: Some(Condition::NZ),
     },
     /* 0x21 */ &Load16BitImmediate { reg: Reg16::HL },
-    /* 0x22 */ &NOP,
+    /* 0x22 */
+    &Load8BitIndirectIncrement {
+        direction: Direction::ToBus,
+        addr_reg: Reg16::HL,
+        reg: Reg8::A,
+    },
     /* 0x23 */ &Increment16Bit { reg: Reg16::HL },
     /* 0x24 */ &Increment8Bit { reg: Reg8::H },
     /* 0x25 */ &Decrement8Bit { reg: Reg8::H },
@@ -72,7 +77,12 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
         condition: Some(Condition::Z),
     },
     /* 0x29 */ &Add16Bit { reg: Reg16::HL },
-    /* 0x2a */ &NOP,
+    /* 0x2a */
+    &Load8BitIndirectIncrement {
+        direction: Direction::ToRegister,
+        addr_reg: Reg16::HL,
+        reg: Reg8::A,
+    },
     /* 0x2b */ &Decrement16Bit { reg: Reg16::HL },
     /* 0x2c */ &Increment8Bit { reg: Reg8::L },
     /* 0x2d */ &Decrement8Bit { reg: Reg8::L },
