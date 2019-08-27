@@ -205,6 +205,36 @@ impl Instruction for Load16BitImmediate {
     }
 }
 
+pub struct Load16BitIndirectImmediate {
+    pub direction: Direction,
+    pub reg: Reg16,
+}
+
+impl Instruction for Load16BitIndirectImmediate {
+    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
+        let addr = bus.read_16bit(reg.get_pc_offset(1));
+        reg.inc_pc(3);
+        match self.direction {
+            Direction::ToBus => {
+                let val = reg.get_16bit(self.reg);
+                bus.write_16bit(addr, val);
+            }
+            Direction::ToRegister => {
+                let val = bus.read_16bit(addr);
+                reg.set_16bit(self.reg, val);
+            }
+        };
+    }
+
+    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+        let addr = bus.read_16bit(addr.wrapping_add(1));
+        match self.direction {
+            Direction::ToBus => format!("LD (${:04x}),{}", addr, self.reg),
+            Direction::ToRegister => format!("LD {},(${:04x})", self.reg, addr),
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 pub enum Condition {
     Z,
