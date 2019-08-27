@@ -513,6 +513,28 @@ impl Instruction for Decrement8Bit {
     }
 }
 
+pub struct Add16Bit {
+    pub reg: Reg16,
+}
+
+impl Instruction for Add16Bit {
+    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
+        let acc = reg.get_16bit(Reg16::HL);
+        let amount = reg.get_16bit(self.reg);
+        let (val, carry) = acc.overflowing_add(amount);
+        let halfcarry = ((acc & 0x00ff) + (amount & 0x00ff)) & 0x0100 == 0x0100;
+        reg.inc_pc(1);
+        reg.set_16bit(Reg16::HL, val);
+        reg.set_flag(Flag::N, false);
+        reg.set_flag(Flag::H, halfcarry);
+        reg.set_flag(Flag::C, carry);
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+        format!("ADD HL,{}", self.reg)
+    }
+}
+
 pub struct Increment16Bit {
     pub reg: Reg16,
 }

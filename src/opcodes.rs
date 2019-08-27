@@ -20,7 +20,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
         direction: Direction::ToRegister,
         reg: Reg16::SP,
     },
-    /* 0x09 */ &NOP,
+    /* 0x09 */ &Add16Bit { reg: Reg16::BC },
     /* 0x0a */
     &Load8BitIndirect {
         direction: Direction::ToRegister,
@@ -46,7 +46,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x16 */ &Load8BitImmediate { reg: Reg8::D },
     /* 0x17 */ &RotateLeftAccumulator,
     /* 0x18 */ &JumpRelative { condition: None },
-    /* 0x19 */ &NOP,
+    /* 0x19 */ &Add16Bit { reg: Reg16::DE },
     /* 0x1a */
     &Load8BitIndirect {
         direction: Direction::ToRegister,
@@ -71,7 +71,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x28 */ &JumpRelative {
         condition: Some(Condition::Z),
     },
-    /* 0x29 */ &NOP,
+    /* 0x29 */ &Add16Bit { reg: Reg16::HL },
     /* 0x2a */ &NOP,
     /* 0x2b */ &NOP,
     /* 0x2c */ &Increment8Bit { reg: Reg8::L },
@@ -91,7 +91,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x38 */ &JumpRelative {
         condition: Some(Condition::C),
     },
-    /* 0x39 */ &NOP,
+    /* 0x39 */ &Add16Bit { reg: Reg16::SP },
     /* 0x3a */ &NOP,
     /* 0x3b */ &NOP,
     /* 0x3c */ &Increment8Bit { reg: Reg8::A },
