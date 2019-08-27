@@ -190,6 +190,10 @@ impl Registers {
         self.ime = set;
     }
 
+    pub fn set_stopped(&mut self, _set: bool) {
+        panic!("CPU stop/halt not implemented");
+    }
+
     pub fn get_pc_offset(&self, offset: i8) -> u16 {
         ((self.pc as i16).wrapping_add(offset as i16)) as u16
     }

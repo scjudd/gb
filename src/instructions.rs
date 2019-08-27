@@ -45,6 +45,19 @@ impl Instruction for EnableInterrupts {
     }
 }
 
+pub struct Stop;
+
+impl Instruction for Stop {
+    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
+        reg.inc_pc(2);
+        reg.set_stopped(true);
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+        "STOP".to_string()
+    }
+}
+
 pub struct RotateLeftCircularAccumulator;
 
 impl Instruction for RotateLeftCircularAccumulator {
