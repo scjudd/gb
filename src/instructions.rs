@@ -551,3 +551,20 @@ impl Instruction for Increment16Bit {
         format!("INC {}", self.reg)
     }
 }
+
+pub struct Decrement16Bit {
+    pub reg: Reg16,
+}
+
+impl Instruction for Decrement16Bit {
+    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
+        reg.inc_pc(1);
+        let last = reg.get_16bit(self.reg);
+        let val = last.wrapping_sub(1);
+        reg.set_16bit(self.reg, val);
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+        format!("DEC {}", self.reg)
+    }
+}
