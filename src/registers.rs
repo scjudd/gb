@@ -90,11 +90,10 @@ pub struct Registers {
     l: u8,
     sp: u16,
     pc: u16,
-    ime: bool,
 }
 
 impl Registers {
-    pub fn new() -> Registers {
+    pub fn initialized() -> Registers {
         Registers {
             a: 0x01,
             f: 0xb0,
@@ -106,7 +105,6 @@ impl Registers {
             l: 0x4d,
             sp: 0xfffe,
             pc: 0x0100,
-            ime: true,
         }
     }
 
@@ -178,20 +176,6 @@ impl Registers {
         } else {
             self.f &= !(flag as u8);
         }
-    }
-
-    /// Return the interrupt "master enable" state
-    pub fn get_ime(&self) -> bool {
-        self.ime
-    }
-
-    /// Set the interrupt "master enable" state
-    pub fn set_ime(&mut self, set: bool) {
-        self.ime = set;
-    }
-
-    pub fn set_stopped(&mut self, _set: bool) {
-        panic!("CPU stop/halt not implemented");
     }
 
     pub fn get_pc_offset(&self, offset: i8) -> u16 {

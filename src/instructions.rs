@@ -1,17 +1,18 @@
 use crate::address_bus::AddressBus;
-use crate::registers::{Flag, Reg16, Reg8, Registers};
+use crate::cpu::CPU;
+use crate::registers::{Flag, Reg16, Reg8};
 use std::fmt::{self, Display, Formatter};
 
 pub trait Instruction {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus);
     fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String;
 }
 
 pub struct NOP;
 
 impl Instruction for NOP {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(1)
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1)
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -22,9 +23,9 @@ impl Instruction for NOP {
 pub struct DisableInterrupts;
 
 impl Instruction for DisableInterrupts {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        reg.set_ime(false);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        cpu.ime = false;
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -35,9 +36,9 @@ impl Instruction for DisableInterrupts {
 pub struct EnableInterrupts;
 
 impl Instruction for EnableInterrupts {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        reg.set_ime(true);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        cpu.ime = true;
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -48,9 +49,9 @@ impl Instruction for EnableInterrupts {
 pub struct Stop;
 
 impl Instruction for Stop {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(2);
-        reg.set_stopped(true);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(2);
+        cpu.stopped = true;
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -61,16 +62,16 @@ impl Instruction for Stop {
 pub struct RotateLeftCircularAccumulator;
 
 impl Instruction for RotateLeftCircularAccumulator {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        let last = reg.get_8bit(Reg8::A);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        let last = cpu.reg.get_8bit(Reg8::A);
         let rotated_bit = (last & 0b1000_0000) >> 7;
         let val = (last << 1) & rotated_bit;
-        reg.set_8bit(Reg8::A, val);
-        reg.set_flag(Flag::Z, false);
-        reg.set_flag(Flag::N, false);
-        reg.set_flag(Flag::H, false);
-        reg.set_flag(Flag::C, rotated_bit == 1);
+        cpu.reg.set_8bit(Reg8::A, val);
+        cpu.reg.set_flag(Flag::Z, false);
+        cpu.reg.set_flag(Flag::N, false);
+        cpu.reg.set_flag(Flag::H, false);
+        cpu.reg.set_flag(Flag::C, rotated_bit == 1);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -81,20 +82,20 @@ impl Instruction for RotateLeftCircularAccumulator {
 pub struct RotateLeftAccumulator;
 
 impl Instruction for RotateLeftAccumulator {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        let last = reg.get_8bit(Reg8::A);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        let last = cpu.reg.get_8bit(Reg8::A);
         let carry = (last & 0b1000_0000) >> 7;
-        let rotated_bit = match reg.get_flag(Flag::C) {
+        let rotated_bit = match cpu.reg.get_flag(Flag::C) {
             true => 1,
             false => 0,
         };
         let val = (last << 1) & rotated_bit;
-        reg.set_8bit(Reg8::A, val);
-        reg.set_flag(Flag::Z, false);
-        reg.set_flag(Flag::N, false);
-        reg.set_flag(Flag::H, false);
-        reg.set_flag(Flag::C, carry == 1);
+        cpu.reg.set_8bit(Reg8::A, val);
+        cpu.reg.set_flag(Flag::Z, false);
+        cpu.reg.set_flag(Flag::N, false);
+        cpu.reg.set_flag(Flag::H, false);
+        cpu.reg.set_flag(Flag::C, carry == 1);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -105,16 +106,16 @@ impl Instruction for RotateLeftAccumulator {
 pub struct RotateRightCircularAccumulator;
 
 impl Instruction for RotateRightCircularAccumulator {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        let last = reg.get_8bit(Reg8::A);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        let last = cpu.reg.get_8bit(Reg8::A);
         let rotated_bit = last & 0b0000_0001;
         let val = (last >> 1) & (rotated_bit << 7);
-        reg.set_8bit(Reg8::A, val);
-        reg.set_flag(Flag::Z, false);
-        reg.set_flag(Flag::N, false);
-        reg.set_flag(Flag::H, false);
-        reg.set_flag(Flag::C, rotated_bit == 1);
+        cpu.reg.set_8bit(Reg8::A, val);
+        cpu.reg.set_flag(Flag::Z, false);
+        cpu.reg.set_flag(Flag::N, false);
+        cpu.reg.set_flag(Flag::H, false);
+        cpu.reg.set_flag(Flag::C, rotated_bit == 1);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -125,20 +126,20 @@ impl Instruction for RotateRightCircularAccumulator {
 pub struct RotateRightAccumulator;
 
 impl Instruction for RotateRightAccumulator {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        let last = reg.get_8bit(Reg8::A);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        let last = cpu.reg.get_8bit(Reg8::A);
         let carry = last & 0b0000_0001;
-        let rotated_bit = match reg.get_flag(Flag::C) {
+        let rotated_bit = match cpu.reg.get_flag(Flag::C) {
             true => 1,
             false => 0,
         };
         let val = (last >> 1) & (rotated_bit << 7);
-        reg.set_8bit(Reg8::A, val);
-        reg.set_flag(Flag::Z, false);
-        reg.set_flag(Flag::N, false);
-        reg.set_flag(Flag::H, false);
-        reg.set_flag(Flag::C, carry == 1);
+        cpu.reg.set_8bit(Reg8::A, val);
+        cpu.reg.set_flag(Flag::Z, false);
+        cpu.reg.set_flag(Flag::N, false);
+        cpu.reg.set_flag(Flag::H, false);
+        cpu.reg.set_flag(Flag::C, carry == 1);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -158,10 +159,10 @@ pub struct Load8Bit {
 }
 
 impl Instruction for Load8Bit {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(2);
-        let val = reg.get_8bit(self.src);
-        reg.set_8bit(self.dst, val);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(2);
+        let val = cpu.reg.get_8bit(self.src);
+        cpu.reg.set_8bit(self.dst, val);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -174,10 +175,10 @@ pub struct Load8BitImmediate {
 }
 
 impl Instruction for Load8BitImmediate {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        let val = bus.read_8bit(reg.get_pc_offset(1));
-        reg.inc_pc(2);
-        reg.set_8bit(self.reg, val);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        let val = bus.read_8bit(cpu.reg.get_pc_offset(1));
+        cpu.reg.inc_pc(2);
+        cpu.reg.set_8bit(self.reg, val);
     }
 
     fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
@@ -193,17 +194,17 @@ pub struct Load8BitIndirect {
 }
 
 impl Instruction for Load8BitIndirect {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        let addr = reg.get_16bit(self.addr_reg);
-        reg.inc_pc(2);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        let addr = cpu.reg.get_16bit(self.addr_reg);
+        cpu.reg.inc_pc(2);
         match self.direction {
             Direction::ToBus => {
-                let val = reg.get_8bit(self.reg);
+                let val = cpu.reg.get_8bit(self.reg);
                 bus.write_8bit(addr, val);
             }
             Direction::ToRegister => {
                 let val = bus.read_8bit(addr);
-                reg.set_8bit(self.reg, val);
+                cpu.reg.set_8bit(self.reg, val);
             }
         }
     }
@@ -223,18 +224,18 @@ pub struct Load8BitIndirectIncrement {
 }
 
 impl Instruction for Load8BitIndirectIncrement {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        let addr = reg.get_16bit(self.addr_reg).wrapping_add(1);
-        reg.inc_pc(2);
-        reg.set_16bit(self.addr_reg, addr);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        let addr = cpu.reg.get_16bit(self.addr_reg).wrapping_add(1);
+        cpu.reg.inc_pc(2);
+        cpu.reg.set_16bit(self.addr_reg, addr);
         match self.direction {
             Direction::ToBus => {
-                let val = reg.get_8bit(self.reg);
+                let val = cpu.reg.get_8bit(self.reg);
                 bus.write_8bit(addr, val);
             }
             Direction::ToRegister => {
                 let val = bus.read_8bit(addr);
-                reg.set_8bit(self.reg, val);
+                cpu.reg.set_8bit(self.reg, val);
             }
         }
     }
@@ -254,18 +255,18 @@ pub struct Load8BitIndirectDecrement {
 }
 
 impl Instruction for Load8BitIndirectDecrement {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        let addr = reg.get_16bit(self.addr_reg).wrapping_sub(1);
-        reg.inc_pc(2);
-        reg.set_16bit(self.addr_reg, addr);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        let addr = cpu.reg.get_16bit(self.addr_reg).wrapping_sub(1);
+        cpu.reg.inc_pc(2);
+        cpu.reg.set_16bit(self.addr_reg, addr);
         match self.direction {
             Direction::ToBus => {
-                let val = reg.get_8bit(self.reg);
+                let val = cpu.reg.get_8bit(self.reg);
                 bus.write_8bit(addr, val);
             }
             Direction::ToRegister => {
                 let val = bus.read_8bit(addr);
-                reg.set_8bit(self.reg, val);
+                cpu.reg.set_8bit(self.reg, val);
             }
         }
     }
@@ -283,17 +284,17 @@ pub struct LoadHigh {
 }
 
 impl Instruction for LoadHigh {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        let addr = 0xff00 + (bus.read_8bit(reg.get_pc_offset(1)) as u16);
-        reg.inc_pc(2);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        let addr = 0xff00 + (bus.read_8bit(cpu.reg.get_pc_offset(1)) as u16);
+        cpu.reg.inc_pc(2);
         match self.direction {
             Direction::ToBus => {
-                let val = reg.get_8bit(Reg8::A);
+                let val = cpu.reg.get_8bit(Reg8::A);
                 bus.write_8bit(addr, val);
             }
             Direction::ToRegister => {
                 let val = bus.read_8bit(addr);
-                reg.set_8bit(Reg8::A, val);
+                cpu.reg.set_8bit(Reg8::A, val);
             }
         }
     }
@@ -312,10 +313,10 @@ pub struct Load16BitImmediate {
 }
 
 impl Instruction for Load16BitImmediate {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        let val = bus.read_16bit(reg.get_pc_offset(1));
-        reg.inc_pc(3);
-        reg.set_16bit(self.reg, val);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        let val = bus.read_16bit(cpu.reg.get_pc_offset(1));
+        cpu.reg.inc_pc(3);
+        cpu.reg.set_16bit(self.reg, val);
     }
 
     fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
@@ -330,17 +331,17 @@ pub struct Load16BitIndirectImmediate {
 }
 
 impl Instruction for Load16BitIndirectImmediate {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        let addr = bus.read_16bit(reg.get_pc_offset(1));
-        reg.inc_pc(3);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        let addr = bus.read_16bit(cpu.reg.get_pc_offset(1));
+        cpu.reg.inc_pc(3);
         match self.direction {
             Direction::ToBus => {
-                let val = reg.get_16bit(self.reg);
+                let val = cpu.reg.get_16bit(self.reg);
                 bus.write_16bit(addr, val);
             }
             Direction::ToRegister => {
                 let val = bus.read_16bit(addr);
-                reg.set_16bit(self.reg, val);
+                cpu.reg.set_16bit(self.reg, val);
             }
         };
     }
@@ -363,12 +364,12 @@ pub enum Condition {
 }
 
 impl Condition {
-    fn is_met(self, reg: &Registers) -> bool {
+    fn is_met(self, cpu: &CPU) -> bool {
         match self {
-            Condition::Z => reg.get_flag(Flag::Z) == true,
-            Condition::NZ => reg.get_flag(Flag::Z) == false,
-            Condition::C => reg.get_flag(Flag::C) == true,
-            Condition::NC => reg.get_flag(Flag::C) == false,
+            Condition::Z => cpu.reg.get_flag(Flag::Z) == true,
+            Condition::NZ => cpu.reg.get_flag(Flag::Z) == false,
+            Condition::C => cpu.reg.get_flag(Flag::C) == true,
+            Condition::NC => cpu.reg.get_flag(Flag::C) == false,
         }
     }
 }
@@ -393,11 +394,11 @@ pub struct JumpImmediate {
 }
 
 impl Instruction for JumpImmediate {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        let addr = bus.read_16bit(reg.get_pc_offset(1));
-        reg.inc_pc(3);
-        if self.condition.map_or(true, |c| c.is_met(reg)) {
-            reg.set_pc(addr);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        let addr = bus.read_16bit(cpu.reg.get_pc_offset(1));
+        cpu.reg.inc_pc(3);
+        if self.condition.map_or(true, |c| c.is_met(cpu)) {
+            cpu.reg.set_pc(addr);
         }
     }
 
@@ -415,11 +416,11 @@ pub struct JumpRelative {
 }
 
 impl Instruction for JumpRelative {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        let offset = bus.read_8bit(reg.get_pc_offset(1)) as i8;
-        reg.inc_pc(2);
-        if self.condition.map_or(true, |c| c.is_met(reg)) {
-            reg.set_pc_offset(offset);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        let offset = bus.read_8bit(cpu.reg.get_pc_offset(1)) as i8;
+        cpu.reg.inc_pc(2);
+        if self.condition.map_or(true, |c| c.is_met(cpu)) {
+            cpu.reg.set_pc_offset(offset);
         }
     }
 
@@ -443,13 +444,13 @@ pub struct Call {
 }
 
 impl Instruction for Call {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        let addr = bus.read_16bit(reg.get_pc_offset(1));
-        reg.inc_pc(3);
-        if self.condition.map_or(true, |c| c.is_met(reg)) {
-            reg.set_sp_offset(-2);
-            bus.write_16bit(reg.get_sp(), reg.get_pc());
-            reg.set_pc(addr);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        let addr = bus.read_16bit(cpu.reg.get_pc_offset(1));
+        cpu.reg.inc_pc(3);
+        if self.condition.map_or(true, |c| c.is_met(cpu)) {
+            cpu.reg.set_sp_offset(-2);
+            bus.write_16bit(cpu.reg.get_sp(), cpu.reg.get_pc());
+            cpu.reg.set_pc(addr);
         }
     }
 
@@ -467,11 +468,11 @@ pub struct Return {
 }
 
 impl Instruction for Return {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        if self.condition.map_or(true, |c| c.is_met(reg)) {
-            reg.set_pc(bus.read_16bit(reg.get_sp()));
-            reg.set_sp_offset(2);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        if self.condition.map_or(true, |c| c.is_met(cpu)) {
+            cpu.reg.set_pc(bus.read_16bit(cpu.reg.get_sp()));
+            cpu.reg.set_sp_offset(2);
         }
     }
 
@@ -486,11 +487,11 @@ impl Instruction for Return {
 pub struct ReturnInterrupt;
 
 impl Instruction for ReturnInterrupt {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        reg.set_ime(true);
-        reg.set_pc(bus.read_16bit(reg.get_sp()));
-        reg.set_sp_offset(2);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        cpu.ime = true;
+        cpu.reg.set_pc(bus.read_16bit(cpu.reg.get_sp()));
+        cpu.reg.set_sp_offset(2);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -501,14 +502,14 @@ impl Instruction for ReturnInterrupt {
 pub struct CompareImmediate;
 
 impl Instruction for CompareImmediate {
-    fn execute(&self, reg: &mut Registers, bus: &mut AddressBus) {
-        let acc = reg.get_8bit(Reg8::A);
-        let val = bus.read_8bit(reg.get_pc_offset(1));
-        reg.inc_pc(2);
-        reg.set_flag(Flag::Z, acc == val);
-        reg.set_flag(Flag::N, true);
-        reg.set_flag(Flag::H, (acc & 0x0f) < (val & 0x0f));
-        reg.set_flag(Flag::C, acc < val);
+    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
+        let acc = cpu.reg.get_8bit(Reg8::A);
+        let val = bus.read_8bit(cpu.reg.get_pc_offset(1));
+        cpu.reg.inc_pc(2);
+        cpu.reg.set_flag(Flag::Z, acc == val);
+        cpu.reg.set_flag(Flag::N, true);
+        cpu.reg.set_flag(Flag::H, (acc & 0x0f) < (val & 0x0f));
+        cpu.reg.set_flag(Flag::C, acc < val);
     }
 
     fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
@@ -522,17 +523,17 @@ pub struct Add {
 }
 
 impl Instruction for Add {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        let acc = reg.get_8bit(Reg8::A);
-        let amount = reg.get_8bit(self.reg);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        let acc = cpu.reg.get_8bit(Reg8::A);
+        let amount = cpu.reg.get_8bit(self.reg);
         let (val, carry) = acc.overflowing_add(amount);
         let halfcarry = ((acc & 0x0f) + (amount & 0x0f)) & 0x10 == 0x10;
-        reg.inc_pc(1);
-        reg.set_8bit(Reg8::A, val);
-        reg.set_flag(Flag::Z, val == 0);
-        reg.set_flag(Flag::N, false);
-        reg.set_flag(Flag::H, halfcarry);
-        reg.set_flag(Flag::C, carry);
+        cpu.reg.inc_pc(1);
+        cpu.reg.set_8bit(Reg8::A, val);
+        cpu.reg.set_flag(Flag::Z, val == 0);
+        cpu.reg.set_flag(Flag::N, false);
+        cpu.reg.set_flag(Flag::H, halfcarry);
+        cpu.reg.set_flag(Flag::C, carry);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -545,12 +546,12 @@ pub struct AddWithCarry {
 }
 
 impl Instruction for AddWithCarry {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        let acc = reg.get_8bit(Reg8::A);
-        let (amount, carry) = reg
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        let acc = cpu.reg.get_8bit(Reg8::A);
+        let (amount, carry) = cpu.reg
             .get_8bit(self.reg)
-            .overflowing_add(match reg.get_flag(Flag::C) {
+            .overflowing_add(match cpu.reg.get_flag(Flag::C) {
                 true => 1,
                 false => 0,
             });
@@ -559,11 +560,11 @@ impl Instruction for AddWithCarry {
             false => acc.overflowing_add(amount),
         };
         let halfcarry = ((acc & 0x0f) + (amount & 0x0f)) & 0x10 == 0x10;
-        reg.set_8bit(Reg8::A, val);
-        reg.set_flag(Flag::Z, val == 0);
-        reg.set_flag(Flag::N, false);
-        reg.set_flag(Flag::H, halfcarry);
-        reg.set_flag(Flag::C, carry);
+        cpu.reg.set_8bit(Reg8::A, val);
+        cpu.reg.set_flag(Flag::Z, val == 0);
+        cpu.reg.set_flag(Flag::N, false);
+        cpu.reg.set_flag(Flag::H, halfcarry);
+        cpu.reg.set_flag(Flag::C, carry);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -576,15 +577,15 @@ pub struct ExclusiveOr {
 }
 
 impl Instruction for ExclusiveOr {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        let acc = reg.get_8bit(Reg8::A);
-        let val = acc ^ reg.get_8bit(self.reg);
-        reg.inc_pc(1);
-        reg.set_8bit(Reg8::A, val);
-        reg.set_flag(Flag::Z, val == 0);
-        reg.set_flag(Flag::N, false);
-        reg.set_flag(Flag::H, false);
-        reg.set_flag(Flag::C, false);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        let acc = cpu.reg.get_8bit(Reg8::A);
+        let val = acc ^ cpu.reg.get_8bit(self.reg);
+        cpu.reg.inc_pc(1);
+        cpu.reg.set_8bit(Reg8::A, val);
+        cpu.reg.set_flag(Flag::Z, val == 0);
+        cpu.reg.set_flag(Flag::N, false);
+        cpu.reg.set_flag(Flag::H, false);
+        cpu.reg.set_flag(Flag::C, false);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -597,14 +598,14 @@ pub struct Increment8Bit {
 }
 
 impl Instruction for Increment8Bit {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        let last = reg.get_8bit(self.reg);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        let last = cpu.reg.get_8bit(self.reg);
         let val = last.wrapping_sub(1);
-        reg.set_8bit(self.reg, val);
-        reg.set_flag(Flag::Z, val == 0);
-        reg.set_flag(Flag::N, false);
-        reg.set_flag(Flag::H, ((last & 0x0f) + (val & 0x0f)) & 0x10 == 0x10);
+        cpu.reg.set_8bit(self.reg, val);
+        cpu.reg.set_flag(Flag::Z, val == 0);
+        cpu.reg.set_flag(Flag::N, false);
+        cpu.reg.set_flag(Flag::H, ((last & 0x0f) + (val & 0x0f)) & 0x10 == 0x10);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -617,14 +618,14 @@ pub struct Decrement8Bit {
 }
 
 impl Instruction for Decrement8Bit {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        let last = reg.get_8bit(self.reg);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        let last = cpu.reg.get_8bit(self.reg);
         let val = last.wrapping_sub(1);
-        reg.set_8bit(self.reg, val);
-        reg.set_flag(Flag::Z, val == 0);
-        reg.set_flag(Flag::N, true);
-        reg.set_flag(Flag::H, (last & 0x0f) < (val & 0x0f));
+        cpu.reg.set_8bit(self.reg, val);
+        cpu.reg.set_flag(Flag::Z, val == 0);
+        cpu.reg.set_flag(Flag::N, true);
+        cpu.reg.set_flag(Flag::H, (last & 0x0f) < (val & 0x0f));
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -637,16 +638,16 @@ pub struct Add16Bit {
 }
 
 impl Instruction for Add16Bit {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        let acc = reg.get_16bit(Reg16::HL);
-        let amount = reg.get_16bit(self.reg);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        let acc = cpu.reg.get_16bit(Reg16::HL);
+        let amount = cpu.reg.get_16bit(self.reg);
         let (val, carry) = acc.overflowing_add(amount);
         let halfcarry = ((acc & 0x00ff) + (amount & 0x00ff)) & 0x0100 == 0x0100;
-        reg.inc_pc(1);
-        reg.set_16bit(Reg16::HL, val);
-        reg.set_flag(Flag::N, false);
-        reg.set_flag(Flag::H, halfcarry);
-        reg.set_flag(Flag::C, carry);
+        cpu.reg.inc_pc(1);
+        cpu.reg.set_16bit(Reg16::HL, val);
+        cpu.reg.set_flag(Flag::N, false);
+        cpu.reg.set_flag(Flag::H, halfcarry);
+        cpu.reg.set_flag(Flag::C, carry);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -659,11 +660,11 @@ pub struct Increment16Bit {
 }
 
 impl Instruction for Increment16Bit {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        let last = reg.get_16bit(self.reg);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        let last = cpu.reg.get_16bit(self.reg);
         let val = last.wrapping_add(1);
-        reg.set_16bit(self.reg, val);
+        cpu.reg.set_16bit(self.reg, val);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -676,11 +677,11 @@ pub struct Decrement16Bit {
 }
 
 impl Instruction for Decrement16Bit {
-    fn execute(&self, reg: &mut Registers, _bus: &mut AddressBus) {
-        reg.inc_pc(1);
-        let last = reg.get_16bit(self.reg);
+    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
+        cpu.reg.inc_pc(1);
+        let last = cpu.reg.get_16bit(self.reg);
         let val = last.wrapping_sub(1);
-        reg.set_16bit(self.reg, val);
+        cpu.reg.set_16bit(self.reg, val);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
