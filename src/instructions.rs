@@ -12,7 +12,8 @@ pub struct NOP;
 
 impl Instruction for NOP {
     fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1)
+        cpu.reg.inc_pc(1);
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -26,6 +27,7 @@ impl Instruction for DisableInterrupts {
     fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
         cpu.reg.inc_pc(1);
         cpu.ime = false;
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -39,6 +41,7 @@ impl Instruction for EnableInterrupts {
     fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
         cpu.reg.inc_pc(1);
         cpu.ime = true;
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -52,6 +55,7 @@ impl Instruction for Stop {
     fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
         cpu.reg.inc_pc(2);
         cpu.stopped = true;
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -72,6 +76,7 @@ impl Instruction for RotateLeftCircularAccumulator {
         cpu.reg.set_flag(Flag::N, false);
         cpu.reg.set_flag(Flag::H, false);
         cpu.reg.set_flag(Flag::C, rotated_bit == 1);
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -96,6 +101,7 @@ impl Instruction for RotateLeftAccumulator {
         cpu.reg.set_flag(Flag::N, false);
         cpu.reg.set_flag(Flag::H, false);
         cpu.reg.set_flag(Flag::C, carry == 1);
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -116,6 +122,7 @@ impl Instruction for RotateRightCircularAccumulator {
         cpu.reg.set_flag(Flag::N, false);
         cpu.reg.set_flag(Flag::H, false);
         cpu.reg.set_flag(Flag::C, rotated_bit == 1);
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -140,6 +147,7 @@ impl Instruction for RotateRightAccumulator {
         cpu.reg.set_flag(Flag::N, false);
         cpu.reg.set_flag(Flag::H, false);
         cpu.reg.set_flag(Flag::C, carry == 1);
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -163,6 +171,7 @@ impl Instruction for Load8Bit {
         cpu.reg.inc_pc(2);
         let val = cpu.reg.get_8bit(self.src);
         cpu.reg.set_8bit(self.dst, val);
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -179,6 +188,7 @@ impl Instruction for Load8BitImmediate {
         let val = bus.read_8bit(cpu.reg.get_pc_offset(1));
         cpu.reg.inc_pc(2);
         cpu.reg.set_8bit(self.reg, val);
+        cpu.inc_mtime(8);
     }
 
     fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
@@ -207,6 +217,7 @@ impl Instruction for Load8BitIndirect {
                 cpu.reg.set_8bit(self.reg, val);
             }
         }
+        cpu.inc_mtime(8);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -238,6 +249,7 @@ impl Instruction for Load8BitIndirectIncrement {
                 cpu.reg.set_8bit(self.reg, val);
             }
         }
+        cpu.inc_mtime(8);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -269,6 +281,7 @@ impl Instruction for Load8BitIndirectDecrement {
                 cpu.reg.set_8bit(self.reg, val);
             }
         }
+        cpu.inc_mtime(8);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -297,6 +310,7 @@ impl Instruction for LoadHigh {
                 cpu.reg.set_8bit(Reg8::A, val);
             }
         }
+        cpu.inc_mtime(12);
     }
 
     fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
@@ -317,6 +331,7 @@ impl Instruction for Load16BitImmediate {
         let val = bus.read_16bit(cpu.reg.get_pc_offset(1));
         cpu.reg.inc_pc(3);
         cpu.reg.set_16bit(self.reg, val);
+        cpu.inc_mtime(12);
     }
 
     fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
@@ -344,6 +359,7 @@ impl Instruction for Load16BitIndirectImmediate {
                 cpu.reg.set_16bit(self.reg, val);
             }
         };
+        cpu.inc_mtime(20);
     }
 
     fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
@@ -397,8 +413,10 @@ impl Instruction for JumpImmediate {
     fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
         let addr = bus.read_16bit(cpu.reg.get_pc_offset(1));
         cpu.reg.inc_pc(3);
+        cpu.inc_mtime(12);
         if self.condition.map_or(true, |c| c.is_met(cpu)) {
             cpu.reg.set_pc(addr);
+            cpu.inc_mtime(4);
         }
     }
 
@@ -419,8 +437,10 @@ impl Instruction for JumpRelative {
     fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
         let offset = bus.read_8bit(cpu.reg.get_pc_offset(1)) as i8;
         cpu.reg.inc_pc(2);
+        cpu.inc_mtime(8);
         if self.condition.map_or(true, |c| c.is_met(cpu)) {
             cpu.reg.set_pc_offset(offset);
+            cpu.inc_mtime(4);
         }
     }
 
@@ -447,10 +467,12 @@ impl Instruction for Call {
     fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
         let addr = bus.read_16bit(cpu.reg.get_pc_offset(1));
         cpu.reg.inc_pc(3);
+        cpu.inc_mtime(12);
         if self.condition.map_or(true, |c| c.is_met(cpu)) {
             cpu.reg.set_sp_offset(-2);
             bus.write_16bit(cpu.reg.get_sp(), cpu.reg.get_pc());
             cpu.reg.set_pc(addr);
+            cpu.inc_mtime(12);
         }
     }
 
@@ -470,9 +492,11 @@ pub struct Return {
 impl Instruction for Return {
     fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
         cpu.reg.inc_pc(1);
+        cpu.inc_mtime(8);
         if self.condition.map_or(true, |c| c.is_met(cpu)) {
             cpu.reg.set_pc(bus.read_16bit(cpu.reg.get_sp()));
             cpu.reg.set_sp_offset(2);
+            cpu.inc_mtime(12);
         }
     }
 
@@ -492,6 +516,7 @@ impl Instruction for ReturnInterrupt {
         cpu.ime = true;
         cpu.reg.set_pc(bus.read_16bit(cpu.reg.get_sp()));
         cpu.reg.set_sp_offset(2);
+        cpu.inc_mtime(16);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -510,6 +535,7 @@ impl Instruction for CompareImmediate {
         cpu.reg.set_flag(Flag::N, true);
         cpu.reg.set_flag(Flag::H, (acc & 0x0f) < (val & 0x0f));
         cpu.reg.set_flag(Flag::C, acc < val);
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
@@ -534,6 +560,7 @@ impl Instruction for Add {
         cpu.reg.set_flag(Flag::N, false);
         cpu.reg.set_flag(Flag::H, halfcarry);
         cpu.reg.set_flag(Flag::C, carry);
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -565,6 +592,7 @@ impl Instruction for AddWithCarry {
         cpu.reg.set_flag(Flag::N, false);
         cpu.reg.set_flag(Flag::H, halfcarry);
         cpu.reg.set_flag(Flag::C, carry);
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -586,6 +614,7 @@ impl Instruction for ExclusiveOr {
         cpu.reg.set_flag(Flag::N, false);
         cpu.reg.set_flag(Flag::H, false);
         cpu.reg.set_flag(Flag::C, false);
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -606,6 +635,7 @@ impl Instruction for Increment8Bit {
         cpu.reg.set_flag(Flag::Z, val == 0);
         cpu.reg.set_flag(Flag::N, false);
         cpu.reg.set_flag(Flag::H, ((last & 0x0f) + (val & 0x0f)) & 0x10 == 0x10);
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -626,6 +656,7 @@ impl Instruction for Decrement8Bit {
         cpu.reg.set_flag(Flag::Z, val == 0);
         cpu.reg.set_flag(Flag::N, true);
         cpu.reg.set_flag(Flag::H, (last & 0x0f) < (val & 0x0f));
+        cpu.inc_mtime(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -648,6 +679,7 @@ impl Instruction for Add16Bit {
         cpu.reg.set_flag(Flag::N, false);
         cpu.reg.set_flag(Flag::H, halfcarry);
         cpu.reg.set_flag(Flag::C, carry);
+        cpu.inc_mtime(8);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -665,6 +697,7 @@ impl Instruction for Increment16Bit {
         let last = cpu.reg.get_16bit(self.reg);
         let val = last.wrapping_add(1);
         cpu.reg.set_16bit(self.reg, val);
+        cpu.inc_mtime(8);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
@@ -682,6 +715,7 @@ impl Instruction for Decrement16Bit {
         let last = cpu.reg.get_16bit(self.reg);
         let val = last.wrapping_sub(1);
         cpu.reg.set_16bit(self.reg, val);
+        cpu.inc_mtime(8);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
