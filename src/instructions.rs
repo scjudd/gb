@@ -576,12 +576,13 @@ impl Instruction for AddWithCarry {
     fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
         cpu.reg.inc_pc(1);
         let acc = cpu.reg.get_8bit(Reg8::A);
-        let (amount, carry) = cpu.reg
-            .get_8bit(self.reg)
-            .overflowing_add(match cpu.reg.get_flag(Flag::C) {
-                true => 1,
-                false => 0,
-            });
+        let (amount, carry) =
+            cpu.reg
+                .get_8bit(self.reg)
+                .overflowing_add(match cpu.reg.get_flag(Flag::C) {
+                    true => 1,
+                    false => 0,
+                });
         let (val, carry) = match carry {
             true => (acc.wrapping_add(amount), true),
             false => acc.overflowing_add(amount),
@@ -634,7 +635,8 @@ impl Instruction for Increment8Bit {
         cpu.reg.set_8bit(self.reg, val);
         cpu.reg.set_flag(Flag::Z, val == 0);
         cpu.reg.set_flag(Flag::N, false);
-        cpu.reg.set_flag(Flag::H, ((last & 0x0f) + (val & 0x0f)) & 0x10 == 0x10);
+        cpu.reg
+            .set_flag(Flag::H, ((last & 0x0f) + (val & 0x0f)) & 0x10 == 0x10);
         cpu.inc_mtime(4);
     }
 
