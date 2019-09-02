@@ -196,7 +196,7 @@ pub struct Load8BitIndirect {
 impl Instruction for Load8BitIndirect {
     fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
         let addr = cpu.reg.get_16bit(self.addr_reg);
-        cpu.reg.inc_pc(2);
+        cpu.reg.inc_pc(1);
         match self.direction {
             Direction::ToBus => {
                 let val = cpu.reg.get_8bit(self.reg);
@@ -226,7 +226,7 @@ pub struct Load8BitIndirectIncrement {
 impl Instruction for Load8BitIndirectIncrement {
     fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
         let addr = cpu.reg.get_16bit(self.addr_reg).wrapping_add(1);
-        cpu.reg.inc_pc(2);
+        cpu.reg.inc_pc(1);
         cpu.reg.set_16bit(self.addr_reg, addr);
         match self.direction {
             Direction::ToBus => {
@@ -257,7 +257,7 @@ pub struct Load8BitIndirectDecrement {
 impl Instruction for Load8BitIndirectDecrement {
     fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
         let addr = cpu.reg.get_16bit(self.addr_reg).wrapping_sub(1);
-        cpu.reg.inc_pc(2);
+        cpu.reg.inc_pc(1);
         cpu.reg.set_16bit(self.addr_reg, addr);
         match self.direction {
             Direction::ToBus => {
