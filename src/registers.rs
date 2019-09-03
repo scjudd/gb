@@ -217,3 +217,32 @@ impl Registers {
         self.pc = self.pc.wrapping_add(amount);
     }
 }
+
+impl Display for Registers {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(
+            f,
+            "A: ${:02x}           AF: ${:04x} SP: ${:04x}    ZNHC\n\
+             B: ${:02x} C: ${:02x}    BC: ${:04x} PC: ${:04x}    {}{}{}{}\n\
+             D: ${:02x} E: ${:02x}    DE: ${:04x}\n\
+             H: ${:02x} L: ${:02x}    HL: ${:04x}",
+            self.get_8bit(Reg8::A),
+            self.get_16bit(Reg16::AF),
+            self.get_16bit(Reg16::SP),
+            self.get_8bit(Reg8::B),
+            self.get_8bit(Reg8::C),
+            self.get_16bit(Reg16::BC),
+            self.get_16bit(Reg16::PC),
+            self.get_flag(Flag::Z) as u8,
+            self.get_flag(Flag::N) as u8,
+            self.get_flag(Flag::H) as u8,
+            self.get_flag(Flag::C) as u8,
+            self.get_8bit(Reg8::D),
+            self.get_8bit(Reg8::E),
+            self.get_16bit(Reg16::DE),
+            self.get_8bit(Reg8::H),
+            self.get_8bit(Reg8::L),
+            self.get_16bit(Reg16::HL),
+        )
+    }
+}
