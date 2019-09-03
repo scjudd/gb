@@ -70,7 +70,7 @@ impl Instruction for RotateLeftCircularAccumulator {
         cpu.reg.inc_pc(1);
         let last = cpu.reg.get_8bit(Reg8::A);
         let rotated_bit = (last & 0b1000_0000) >> 7;
-        let val = (last << 1) & rotated_bit;
+        let val = (last << 1) | rotated_bit;
         cpu.reg.set_8bit(Reg8::A, val);
         cpu.reg.set_flag(Flag::Z, false);
         cpu.reg.set_flag(Flag::N, false);
@@ -91,11 +91,8 @@ impl Instruction for RotateLeftAccumulator {
         cpu.reg.inc_pc(1);
         let last = cpu.reg.get_8bit(Reg8::A);
         let carry = (last & 0b1000_0000) >> 7;
-        let rotated_bit = match cpu.reg.get_flag(Flag::C) {
-            true => 1,
-            false => 0,
-        };
-        let val = (last << 1) & rotated_bit;
+        let rotated_bit = cpu.reg.get_flag(Flag::C) as u8;
+        let val = (last << 1) | rotated_bit;
         cpu.reg.set_8bit(Reg8::A, val);
         cpu.reg.set_flag(Flag::Z, false);
         cpu.reg.set_flag(Flag::N, false);
@@ -116,7 +113,7 @@ impl Instruction for RotateRightCircularAccumulator {
         cpu.reg.inc_pc(1);
         let last = cpu.reg.get_8bit(Reg8::A);
         let rotated_bit = last & 0b0000_0001;
-        let val = (last >> 1) & (rotated_bit << 7);
+        let val = (last >> 1) | (rotated_bit << 7);
         cpu.reg.set_8bit(Reg8::A, val);
         cpu.reg.set_flag(Flag::Z, false);
         cpu.reg.set_flag(Flag::N, false);
@@ -137,11 +134,8 @@ impl Instruction for RotateRightAccumulator {
         cpu.reg.inc_pc(1);
         let last = cpu.reg.get_8bit(Reg8::A);
         let carry = last & 0b0000_0001;
-        let rotated_bit = match cpu.reg.get_flag(Flag::C) {
-            true => 1,
-            false => 0,
-        };
-        let val = (last >> 1) & (rotated_bit << 7);
+        let rotated_bit = cpu.reg.get_flag(Flag::C) as u8;
+        let val = (last >> 1) | (rotated_bit << 7);
         cpu.reg.set_8bit(Reg8::A, val);
         cpu.reg.set_flag(Flag::Z, false);
         cpu.reg.set_flag(Flag::N, false);
