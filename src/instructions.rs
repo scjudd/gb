@@ -162,7 +162,7 @@ pub struct Load8Bit {
 
 impl Instruction for Load8Bit {
     fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(2);
+        cpu.reg.inc_pc(1);
         let val = cpu.reg.get_8bit(self.src);
         cpu.reg.set_8bit(self.dst, val);
         cpu.inc_mtime(4);
