@@ -93,6 +93,23 @@ pub struct Registers {
 }
 
 impl Registers {
+    /// Return a set of registers that have been reset to zero.
+    pub fn reset() -> Registers {
+        Registers {
+            a: 0,
+            f: 0,
+            b: 0,
+            c: 0,
+            d: 0,
+            e: 0,
+            h: 0,
+            l: 0,
+            sp: 0,
+            pc: 0,
+        }
+    }
+
+    /// Return a set of registers that match the post-boot state of a real GameBoy.
     pub fn initialized() -> Registers {
         Registers {
             a: 0x01,

@@ -17,6 +17,15 @@ impl CPU {
         }
     }
 
+    pub fn reset() -> CPU {
+        CPU {
+            mtime: 0,
+            reg: Registers::reset(),
+            ime: true,
+            stopped: false,
+        }
+    }
+
     pub fn inc_mtime(&mut self, amount: usize) {
         self.mtime = self.mtime.wrapping_add(amount);
     }
