@@ -334,34 +334,20 @@ impl Instruction for Load16BitImmediate {
     }
 }
 
-pub struct Load16BitIndirectImmediate {
-    pub direction: Direction,
-    pub reg: Reg16,
-}
+pub struct Load16BitIndirectImmediate;
 
 impl Instruction for Load16BitIndirectImmediate {
     fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
         let addr = bus.read_16bit(cpu.reg.get_pc_offset(1));
         cpu.reg.inc_pc(3);
-        match self.direction {
-            Direction::ToBus => {
-                let val = cpu.reg.get_16bit(self.reg);
-                bus.write_16bit(addr, val);
-            }
-            Direction::ToRegister => {
-                let val = bus.read_16bit(addr);
-                cpu.reg.set_16bit(self.reg, val);
-            }
-        };
+        let val = cpu.reg.get_16bit(Reg16::SP);
+        bus.write_16bit(addr, val);
         cpu.inc_mtime(20);
     }
 
     fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
         let addr = bus.read_16bit(addr.wrapping_add(1));
-        match self.direction {
-            Direction::ToBus => format!("LD (${:04x}),{}", addr, self.reg),
-            Direction::ToRegister => format!("LD {},(${:04x})", self.reg, addr),
-        }
+        format!("LD (${:04x}),SP", addr)
     }
 }
 
