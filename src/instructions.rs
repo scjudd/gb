@@ -1045,4 +1045,86 @@ mod tests {
         assert_eq!(cpu.reg.get_pc(), 0xc6aa);
         assert_eq!(cpu.mtime, 16);
     }
+
+    #[test]
+    fn test_jump_immediate_condition_met() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_flag(Flag::Z, true);
+        let inst = &JumpImmediate {
+            condition: Some(Condition::Z),
+        };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "JP Z,$c6aa");
+        assert_eq!(cpu.reg.get_pc(), 0xc6aa);
+        assert_eq!(cpu.mtime, 16);
+    }
+
+    #[test]
+    fn test_jump_immediate_condition_unmet() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_flag(Flag::Z, false);
+        let inst = &JumpImmediate {
+            condition: Some(Condition::Z),
+        };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "JP Z,$c6aa");
+        assert_eq!(cpu.reg.get_pc(), 3);
+        assert_eq!(cpu.mtime, 12);
+    }
+
+    #[test]
+    fn test_jump_relative_no_condition() {
+        let (cpu, bus) = fixtures();
+        let inst = &JumpRelative { condition: None };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "JR $-56");
+        assert_eq!(cpu.reg.get_pc(), 0xffac);
+        assert_eq!(cpu.mtime, 12);
+    }
+
+    #[test]
+    fn test_jump_relative_condition_met() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_flag(Flag::Z, true);
+        let inst = &JumpRelative {
+            condition: Some(Condition::Z),
+        };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "JR Z,$-56");
+        assert_eq!(cpu.reg.get_pc(), 0xffac);
+        assert_eq!(cpu.mtime, 12);
+    }
+
+    #[test]
+    fn test_jump_relative_condition_unmet() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_flag(Flag::Z, false);
+        let inst = &JumpRelative {
+            condition: Some(Condition::Z),
+        };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "JR Z,$-56");
+        assert_eq!(cpu.reg.get_pc(), 2);
+        assert_eq!(cpu.mtime, 8);
+    }
+
+    #[test]
+    fn test_call_no_condition() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_sp(0xc6ff);
+        let inst = &Call { condition: None };
+        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
+        let top_of_stack = 0xc6fd;
+
+        assert_eq!(mnemonic, "CALL $c6aa");
+        assert_eq!(cpu.reg.get_pc(), 0xc6aa);
+        assert_eq!(cpu.reg.get_sp(), top_of_stack);
+        assert_eq!(bus.read_16bit(top_of_stack), 3);
+        assert_eq!(cpu.mtime, 24);
+    }
 }
