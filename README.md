@@ -1,5 +1,7 @@
 # gb
 
+[![CircleCI](https://circleci.com/gh/scjudd/gb.svg?style=svg)](https://circleci.com/gh/scjudd/gb)
+
 A work-in-progress GameBoy emulator written in Rust. This is a passion project for me and I make no commitment that this will ever be complete or even useful to anyone else.
 
 If you'd like to contribute to the project, even if you have very little experience with Rust or writing emulators, let me know! This is meant to be a fun learning exercise, to stretch our brains and help us grow into better developers. Feel free to implement more instructions (there's still quite a bit to do there), or design and implement a completely new component. Just don't mindlessly copy and adapt someone else's work. The goal is not to have a working emulator as quickly as possible, but to _understand_ how all this cool shit works.
