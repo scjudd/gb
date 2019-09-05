@@ -704,3 +704,345 @@ impl Instruction for Decrement16Bit {
         format!("DEC {}", self.reg)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fixtures() -> (CPU, AddressBus) {
+        let cpu = CPU::reset();
+        let bus = AddressBus::from_raw(&[0x00, 0xaa, 0xc6]);
+        (cpu, bus)
+    }
+
+    fn test_instruction(
+        inst: &dyn Instruction,
+        mut cpu: CPU,
+        mut bus: AddressBus,
+    ) -> (CPU, AddressBus, String) {
+        let mnemonic = inst.mnemonic(0x0000, &mut bus);
+        inst.execute(&mut cpu, &mut bus);
+        (cpu, bus, mnemonic)
+    }
+
+    #[test]
+    fn test_nop() {
+        let (cpu, bus) = fixtures();
+        let (cpu, _bus, mnemonic) = test_instruction(&NOP, cpu, bus);
+
+        assert_eq!(mnemonic, "NOP");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.mtime, 4);
+    }
+
+    #[test]
+    fn test_disable_interrupts() {
+        let (cpu, bus) = fixtures();
+        let (cpu, _bus, mnemonic) = test_instruction(&DisableInterrupts, cpu, bus);
+
+        assert_eq!(mnemonic, "DI");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.ime, false);
+        assert_eq!(cpu.mtime, 4);
+    }
+
+    #[test]
+    fn test_enable_interrupts() {
+        let (mut cpu, bus) = fixtures();
+        cpu.ime = false;
+        let (cpu, _bus, mnemonic) = test_instruction(&EnableInterrupts, cpu, bus);
+
+        assert_eq!(mnemonic, "EI");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.ime, true);
+        assert_eq!(cpu.mtime, 4);
+    }
+
+    #[test]
+    fn test_stop() {
+        let (cpu, bus) = fixtures();
+        let (cpu, _bus, mnemonic) = test_instruction(&Stop, cpu, bus);
+
+        assert_eq!(mnemonic, "STOP");
+        assert_eq!(cpu.reg.get_pc(), 2);
+        assert_eq!(cpu.stopped, true);
+        assert_eq!(cpu.mtime, 4);
+    }
+
+    #[test]
+    fn test_rotate_left_circular_accumulator() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_8bit(Reg8::A, 0b1000_0000);
+        let (cpu, _bus, mnemonic) = test_instruction(&RotateLeftCircularAccumulator, cpu, bus);
+
+        assert_eq!(mnemonic, "RLCA");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.mtime, 4);
+        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0b0000_0001);
+        assert_eq!(cpu.reg.get_flag(Flag::C), true);
+    }
+
+    #[test]
+    fn test_rotate_left_accumulator() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_8bit(Reg8::A, 0b0000_0000);
+        cpu.reg.set_flag(Flag::C, true);
+        let (cpu, _bus, mnemonic) = test_instruction(&RotateLeftAccumulator, cpu, bus);
+
+        assert_eq!(mnemonic, "RLA");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.mtime, 4);
+        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0b0000_0001);
+        assert_eq!(cpu.reg.get_flag(Flag::C), false);
+    }
+
+    #[test]
+    fn test_rotate_right_circular_accumulator() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_8bit(Reg8::A, 0b0000_0001);
+        let (cpu, _bus, mnemonic) = test_instruction(&RotateRightCircularAccumulator, cpu, bus);
+
+        assert_eq!(mnemonic, "RRCA");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.mtime, 4);
+        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0b1000_0000);
+        assert_eq!(cpu.reg.get_flag(Flag::C), true);
+    }
+
+    #[test]
+    fn test_rotate_right_accumulator() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_8bit(Reg8::A, 0b0000_0000);
+        cpu.reg.set_flag(Flag::C, true);
+        let (cpu, _bus, mnemonic) = test_instruction(&RotateRightAccumulator, cpu, bus);
+
+        assert_eq!(mnemonic, "RRA");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.mtime, 4);
+        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0b1000_0000);
+        assert_eq!(cpu.reg.get_flag(Flag::C), false);
+    }
+
+    #[test]
+    fn test_load_8bit() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_8bit(Reg8::A, 0x00);
+        cpu.reg.set_8bit(Reg8::B, 0xff);
+        let inst = &Load8Bit {
+            dst: Reg8::A,
+            src: Reg8::B,
+        };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "LD A,B");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.mtime, 4);
+        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0xff);
+    }
+
+    #[test]
+    fn test_load_8bit_immediate() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_8bit(Reg8::A, 0x00);
+        let inst = &Load8BitImmediate { reg: Reg8::A };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "LD A,$aa");
+        assert_eq!(cpu.reg.get_pc(), 2);
+        assert_eq!(cpu.mtime, 8);
+        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0xaa);
+    }
+
+    #[test]
+    fn test_load_8bit_indirect_to_bus() {
+        let (mut cpu, mut bus) = fixtures();
+        let addr = 0xc000;
+        cpu.reg.set_16bit(Reg16::BC, addr);
+        cpu.reg.set_8bit(Reg8::A, 0xff);
+        bus.write_8bit(addr, 0x00);
+        let inst = &Load8BitIndirect {
+            direction: Direction::ToBus,
+            addr_reg: Reg16::BC,
+            reg: Reg8::A,
+        };
+        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "LD (BC),A");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.mtime, 8);
+        assert_eq!(bus.read_8bit(addr), 0xff);
+    }
+
+    #[test]
+    fn test_load_8bit_indirect_to_register() {
+        let (mut cpu, mut bus) = fixtures();
+        let addr = 0xc000;
+        cpu.reg.set_16bit(Reg16::BC, addr);
+        cpu.reg.set_8bit(Reg8::A, 0x00);
+        bus.write_8bit(addr, 0xff);
+        let inst = &Load8BitIndirect {
+            direction: Direction::ToRegister,
+            addr_reg: Reg16::BC,
+            reg: Reg8::A,
+        };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "LD A,(BC)");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.mtime, 8);
+        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0xff);
+    }
+
+    #[test]
+    fn test_load_8bit_indirect_increment_to_bus() {
+        let (mut cpu, mut bus) = fixtures();
+        let addr = 0xc000;
+        cpu.reg.set_16bit(Reg16::BC, addr);
+        cpu.reg.set_8bit(Reg8::A, 0xff);
+        bus.write_8bit(addr, 0x00);
+        let inst = &Load8BitIndirectIncrement {
+            direction: Direction::ToBus,
+            addr_reg: Reg16::BC,
+            reg: Reg8::A,
+        };
+        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "LD (BC+),A");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.mtime, 8);
+        assert_eq!(bus.read_8bit(addr), 0xff);
+        assert_eq!(cpu.reg.get_16bit(Reg16::BC), addr.wrapping_add(1));
+    }
+
+    #[test]
+    fn test_load_8bit_indirect_increment_to_register() {
+        let (mut cpu, mut bus) = fixtures();
+        let addr = 0xc000;
+        cpu.reg.set_16bit(Reg16::BC, addr);
+        cpu.reg.set_8bit(Reg8::A, 0x00);
+        bus.write_8bit(addr, 0xff);
+        let inst = &Load8BitIndirectIncrement {
+            direction: Direction::ToRegister,
+            addr_reg: Reg16::BC,
+            reg: Reg8::A,
+        };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "LD A,(BC+)");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.mtime, 8);
+        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0xff);
+        assert_eq!(cpu.reg.get_16bit(Reg16::BC), addr.wrapping_add(1));
+    }
+
+    #[test]
+    fn test_load_8bit_indirect_decrement_to_bus() {
+        let (mut cpu, mut bus) = fixtures();
+        let addr = 0xc000;
+        cpu.reg.set_16bit(Reg16::BC, addr);
+        cpu.reg.set_8bit(Reg8::A, 0xff);
+        bus.write_8bit(addr, 0x00);
+        let inst = &Load8BitIndirectDecrement {
+            direction: Direction::ToBus,
+            addr_reg: Reg16::BC,
+            reg: Reg8::A,
+        };
+        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "LD (BC-),A");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.mtime, 8);
+        assert_eq!(bus.read_8bit(addr), 0xff);
+        assert_eq!(cpu.reg.get_16bit(Reg16::BC), addr.wrapping_sub(1));
+    }
+
+    #[test]
+    fn test_load_8bit_indirect_decrement_to_register() {
+        let (mut cpu, mut bus) = fixtures();
+        let addr = 0xc000;
+        cpu.reg.set_16bit(Reg16::BC, addr);
+        cpu.reg.set_8bit(Reg8::A, 0x00);
+        bus.write_8bit(addr, 0xff);
+        let inst = &Load8BitIndirectDecrement {
+            direction: Direction::ToRegister,
+            addr_reg: Reg16::BC,
+            reg: Reg8::A,
+        };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "LD A,(BC-)");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.mtime, 8);
+        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0xff);
+        assert_eq!(cpu.reg.get_16bit(Reg16::BC), addr.wrapping_sub(1));
+    }
+
+    #[test]
+    fn test_load_high_to_bus() {
+        let (mut cpu, mut bus) = fixtures();
+        cpu.reg.set_8bit(Reg8::A, 0xff);
+        bus.write_8bit(0xffaa, 0x00);
+        let inst = &LoadHigh {
+            direction: Direction::ToBus,
+        };
+        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "LDH ($aa),A");
+        assert_eq!(cpu.reg.get_pc(), 2);
+        assert_eq!(cpu.mtime, 12);
+        assert_eq!(bus.read_16bit(0xffaa), 0xff);
+    }
+
+    #[test]
+    fn test_load_high_to_register() {
+        let (mut cpu, mut bus) = fixtures();
+        cpu.reg.set_8bit(Reg8::A, 0x00);
+        bus.write_8bit(0xffaa, 0xff);
+        let inst = &LoadHigh {
+            direction: Direction::ToRegister,
+        };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "LDH A,($aa)");
+        assert_eq!(cpu.reg.get_pc(), 2);
+        assert_eq!(cpu.mtime, 12);
+        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0xff);
+    }
+
+    #[test]
+    fn test_load_16bit_immediate() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_16bit(Reg16::BC, 0x0000);
+        let inst = &Load16BitImmediate { reg: Reg16::BC };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "LD BC,$c6aa");
+        assert_eq!(cpu.reg.get_pc(), 3);
+        assert_eq!(cpu.mtime, 12);
+        assert_eq!(cpu.reg.get_16bit(Reg16::BC), 0xc6aa);
+    }
+
+    #[test]
+    fn test_load_16bit_indirect_immediate() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_16bit(Reg16::SP, 0xffff);
+        let inst = &Load16BitIndirectImmediate;
+        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "LD ($c6aa),SP");
+        assert_eq!(cpu.reg.get_pc(), 3);
+        assert_eq!(cpu.mtime, 20);
+        assert_eq!(bus.read_16bit(0xc6aa), 0xffff);
+    }
+
+    #[test]
+    fn test_jump_immediate_no_condition() {
+        let (cpu, bus) = fixtures();
+        let inst = &JumpImmediate { condition: None };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "JP $c6aa");
+        assert_eq!(cpu.reg.get_pc(), 0xc6aa);
+        assert_eq!(cpu.mtime, 16);
+    }
+}
