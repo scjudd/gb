@@ -7,6 +7,9 @@ use std::io::Read;
 /// various memories and peripherals.
 pub struct AddressBus {
     rom: Vec<u8>,
+    vram: [u8; 0x2000],
+    ext_ram: [u8; 0x2000],
+    wram: [u8; 0x2000],
     io_registers: [u8; 0x80],
     hram: [u8; 0x7f],
     ie_register: u8,
@@ -39,6 +42,9 @@ impl AddressBus {
 
         AddressBus {
             rom,
+            vram: [0; 0x2000],
+            ext_ram: [0; 0x2000],
+            wram: [0; 0x2000],
             io_registers: [0; 0x80],
             hram: [0; 0x7f],
             ie_register: 0,
@@ -48,6 +54,18 @@ impl AddressBus {
     pub fn read_8bit(&self, addr: u16) -> u8 {
         if addr <= 0x8000 {
             return self.rom[addr as usize];
+        }
+
+        if addr >= 0x8000 && addr <= 0x9fff {
+            return self.vram[(addr - 0x8000) as usize];
+        }
+
+        if addr >= 0xa000 && addr <= 0xbfff {
+            return self.ext_ram[(addr - 0xa000) as usize];
+        }
+
+        if addr >= 0xc000 && addr <= 0xdfff {
+            return self.wram[(addr - 0xc000) as usize];
         }
 
         if addr >= 0xff00 && addr <= 0xff7f {
@@ -80,6 +98,21 @@ impl AddressBus {
             // whatever sort of ROM/RAM bank switching on writes into this address space. For now,
             // we'll just panic.
             panic!("Attempted to write to read-only memory, and ROM/RAM bank switching is not yet implemented.");
+        }
+
+        if addr >= 0x8000 && addr <= 0x9fff {
+            self.vram[(addr - 0x8000) as usize] = value;
+            return;
+        }
+
+        if addr >= 0xa000 && addr <= 0xbfff {
+            self.ext_ram[(addr - 0xa000) as usize] = value;
+            return;
+        }
+
+        if addr >= 0xc000 && addr <= 0xdfff {
+            self.wram[(addr - 0xc000) as usize] = value;
+            return;
         }
 
         if addr >= 0xff00 && addr <= 0xff7f {
