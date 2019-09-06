@@ -476,7 +476,10 @@ impl Instruction for Return {
         if self.condition.map_or(true, |c| c.is_met(cpu)) {
             cpu.reg.set_pc(bus.read_16bit(cpu.reg.get_sp()));
             cpu.reg.set_sp_offset(2);
-            cpu.inc_mtime(12);
+            cpu.inc_mtime(match self.condition {
+                None => 8,
+                Some(_) => 12,
+            });
         }
     }
 
@@ -1126,5 +1129,85 @@ mod tests {
         assert_eq!(cpu.reg.get_sp(), top_of_stack);
         assert_eq!(bus.read_16bit(top_of_stack), 3);
         assert_eq!(cpu.mtime, 24);
+    }
+
+    #[test]
+    fn test_call_condition_met() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_sp(0xc6ff);
+        cpu.reg.set_flag(Flag::Z, true);
+        let inst = &Call {
+            condition: Some(Condition::Z),
+        };
+        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
+        let top_of_stack = 0xc6fd;
+
+        assert_eq!(mnemonic, "CALL Z,$c6aa");
+        assert_eq!(cpu.reg.get_pc(), 0xc6aa);
+        assert_eq!(cpu.reg.get_sp(), top_of_stack);
+        assert_eq!(bus.read_16bit(top_of_stack), 3);
+        assert_eq!(cpu.mtime, 24);
+    }
+
+    #[test]
+    fn test_call_condition_unmet() {
+        let (mut cpu, bus) = fixtures();
+        cpu.reg.set_flag(Flag::Z, false);
+        let inst = &Call {
+            condition: Some(Condition::Z),
+        };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "CALL Z,$c6aa");
+        assert_eq!(cpu.reg.get_pc(), 3);
+        assert_eq!(cpu.mtime, 12);
+    }
+
+    #[test]
+    fn test_return_no_condition() {
+        let (mut cpu, mut bus) = fixtures();
+        cpu.reg.set_sp(0xc6fd);
+        bus.write_16bit(0xc6fd, 0xcfaa);
+        let inst = &Return { condition: None };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "RET");
+        assert_eq!(cpu.reg.get_pc(), 0xcfaa);
+        assert_eq!(cpu.reg.get_sp(), 0xc6ff);
+        assert_eq!(cpu.mtime, 16);
+    }
+
+    #[test]
+    fn test_return_condition_met() {
+        let (mut cpu, mut bus) = fixtures();
+        cpu.reg.set_sp(0xc6fd);
+        bus.write_16bit(0xc6fd, 0xcfaa);
+        cpu.reg.set_flag(Flag::Z, true);
+        let inst = &Return {
+            condition: Some(Condition::Z),
+        };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "RET Z");
+        assert_eq!(cpu.reg.get_pc(), 0xcfaa);
+        assert_eq!(cpu.reg.get_sp(), 0xc6ff);
+        assert_eq!(cpu.mtime, 20);
+    }
+
+    #[test]
+    fn test_return_condition_unmet() {
+        let (mut cpu, mut bus) = fixtures();
+        cpu.reg.set_sp(0xc6fd);
+        bus.write_16bit(0xc6fd, 0xcfaa);
+        cpu.reg.set_flag(Flag::Z, false);
+        let inst = &Return {
+            condition: Some(Condition::Z),
+        };
+        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
+
+        assert_eq!(mnemonic, "RET Z");
+        assert_eq!(cpu.reg.get_pc(), 1);
+        assert_eq!(cpu.reg.get_sp(), 0xc6fd);
+        assert_eq!(cpu.mtime, 8);
     }
 }
