@@ -1,12 +1,14 @@
-mod address_bus;
+mod bus;
 mod cpu;
 mod instructions;
 mod opcodes;
 mod registers;
+mod spies;
 
-use crate::address_bus::AddressBus;
-use crate::cpu::CPU;
+use crate::bus::{Address, Bus};
+use crate::cpu::{Compute, Cpu};
 use crate::opcodes::OPCODES;
+use crate::registers::Reg16;
 use std::env;
 use std::process;
 
@@ -18,22 +20,22 @@ fn main() {
         process::exit(1);
     }
 
-    let mut cpu = CPU::initialized();
-    let mut bus = AddressBus::load_rom(&args[1]);
+    let mut cpu = Cpu::initialized();
+    let mut bus = Bus::load_rom(&args[1]);
 
     loop {
         next(&mut cpu, &mut bus);
     }
 }
 
-fn next(mut cpu: &mut CPU, mut bus: &mut AddressBus) {
-    let pc = cpu.reg.get_pc();
+fn next(mut cpu: &mut Cpu, mut bus: &mut Bus) {
+    let pc = cpu.get_reg16(Reg16::PC);
     let opcode = bus.read_8bit(pc);
     let inst = OPCODES[opcode as usize];
     inst.execute(cpu, bus);
     println!("{:04x}: {:02x} {}", pc, opcode, inst.mnemonic(pc, bus));
 
-    if cpu.ime {
+    if cpu.get_ime() {
         let reg_if = bus.read_8bit(0xff0f);
         let reg_ie = bus.read_8bit(0xffff);
         let fired = reg_if & reg_ie;
@@ -49,11 +51,11 @@ fn next(mut cpu: &mut CPU, mut bus: &mut AddressBus) {
     // to 4.20MHz for DMG, 8.4MHz for CGB in double-speed mode.
 }
 
-fn handle_interrupt(addr: u16, cpu: &mut CPU, bus: &mut AddressBus) {
-    cpu.ime = false;
-    cpu.reg.set_sp_offset(-2);
-    bus.write_16bit(cpu.reg.get_sp(), cpu.reg.get_pc());
-    cpu.reg.set_pc(addr);
+fn handle_interrupt(addr: u16, cpu: &mut Cpu, bus: &mut Bus) {
+    cpu.set_ime(false);
+    cpu.set_reg16_offset(Reg16::SP, -2);
+    bus.write_16bit(cpu.get_reg16(Reg16::SP), cpu.get_reg16(Reg16::PC));
+    cpu.set_reg16(Reg16::PC, addr);
 
     // This costs 12 cycles on top of however many the actual interrupt handler takes
 }

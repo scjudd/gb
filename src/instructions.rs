@@ -1,22 +1,22 @@
-use crate::address_bus::AddressBus;
-use crate::cpu::CPU;
+use crate::bus::Address;
+use crate::cpu::Compute;
 use crate::registers::{Flag, Reg16, Reg8};
 use std::fmt::{self, Display, Formatter};
 
 pub trait Instruction {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus);
-    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String;
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address);
+    fn mnemonic(&self, addr: u16, bus: &dyn Address) -> String;
 }
 
 pub struct NOP;
 
 impl Instruction for NOP {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        cpu.inc_mtime(4);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         "NOP".to_string()
     }
 }
@@ -24,13 +24,13 @@ impl Instruction for NOP {
 pub struct DisableInterrupts;
 
 impl Instruction for DisableInterrupts {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        cpu.ime = false;
-        cpu.inc_mtime(4);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        cpu.set_ime(false);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         "DI".to_string()
     }
 }
@@ -38,13 +38,13 @@ impl Instruction for DisableInterrupts {
 pub struct EnableInterrupts;
 
 impl Instruction for EnableInterrupts {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        cpu.ime = true;
-        cpu.inc_mtime(4);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        cpu.set_ime(true);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         "EI".to_string()
     }
 }
@@ -52,13 +52,13 @@ impl Instruction for EnableInterrupts {
 pub struct Stop;
 
 impl Instruction for Stop {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(2);
-        cpu.stopped = true;
-        cpu.inc_mtime(4);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 2);
+        cpu.set_stopped(true);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         "STOP".to_string()
     }
 }
@@ -66,20 +66,20 @@ impl Instruction for Stop {
 pub struct RotateLeftCircularAccumulator;
 
 impl Instruction for RotateLeftCircularAccumulator {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        let last = cpu.reg.get_8bit(Reg8::A);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        let last = cpu.get_reg8(Reg8::A);
         let rotated_bit = (last & 0b1000_0000) >> 7;
         let val = (last << 1) | rotated_bit;
-        cpu.reg.set_8bit(Reg8::A, val);
-        cpu.reg.set_flag(Flag::Z, false);
-        cpu.reg.set_flag(Flag::N, false);
-        cpu.reg.set_flag(Flag::H, false);
-        cpu.reg.set_flag(Flag::C, rotated_bit == 1);
-        cpu.inc_mtime(4);
+        cpu.set_reg8(Reg8::A, val);
+        cpu.set_flag(Flag::Z, false);
+        cpu.set_flag(Flag::N, false);
+        cpu.set_flag(Flag::H, false);
+        cpu.set_flag(Flag::C, rotated_bit == 1);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         "RLCA".to_string()
     }
 }
@@ -87,21 +87,21 @@ impl Instruction for RotateLeftCircularAccumulator {
 pub struct RotateLeftAccumulator;
 
 impl Instruction for RotateLeftAccumulator {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        let last = cpu.reg.get_8bit(Reg8::A);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        let last = cpu.get_reg8(Reg8::A);
         let carry = (last & 0b1000_0000) >> 7;
-        let rotated_bit = cpu.reg.get_flag(Flag::C) as u8;
+        let rotated_bit = cpu.get_flag(Flag::C) as u8;
         let val = (last << 1) | rotated_bit;
-        cpu.reg.set_8bit(Reg8::A, val);
-        cpu.reg.set_flag(Flag::Z, false);
-        cpu.reg.set_flag(Flag::N, false);
-        cpu.reg.set_flag(Flag::H, false);
-        cpu.reg.set_flag(Flag::C, carry == 1);
-        cpu.inc_mtime(4);
+        cpu.set_reg8(Reg8::A, val);
+        cpu.set_flag(Flag::Z, false);
+        cpu.set_flag(Flag::N, false);
+        cpu.set_flag(Flag::H, false);
+        cpu.set_flag(Flag::C, carry == 1);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         "RLA".to_string()
     }
 }
@@ -109,20 +109,20 @@ impl Instruction for RotateLeftAccumulator {
 pub struct RotateRightCircularAccumulator;
 
 impl Instruction for RotateRightCircularAccumulator {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        let last = cpu.reg.get_8bit(Reg8::A);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        let last = cpu.get_reg8(Reg8::A);
         let rotated_bit = last & 0b0000_0001;
         let val = (last >> 1) | (rotated_bit << 7);
-        cpu.reg.set_8bit(Reg8::A, val);
-        cpu.reg.set_flag(Flag::Z, false);
-        cpu.reg.set_flag(Flag::N, false);
-        cpu.reg.set_flag(Flag::H, false);
-        cpu.reg.set_flag(Flag::C, rotated_bit == 1);
-        cpu.inc_mtime(4);
+        cpu.set_reg8(Reg8::A, val);
+        cpu.set_flag(Flag::Z, false);
+        cpu.set_flag(Flag::N, false);
+        cpu.set_flag(Flag::H, false);
+        cpu.set_flag(Flag::C, rotated_bit == 1);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         "RRCA".to_string()
     }
 }
@@ -130,21 +130,21 @@ impl Instruction for RotateRightCircularAccumulator {
 pub struct RotateRightAccumulator;
 
 impl Instruction for RotateRightAccumulator {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        let last = cpu.reg.get_8bit(Reg8::A);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        let last = cpu.get_reg8(Reg8::A);
         let carry = last & 0b0000_0001;
-        let rotated_bit = cpu.reg.get_flag(Flag::C) as u8;
+        let rotated_bit = cpu.get_flag(Flag::C) as u8;
         let val = (last >> 1) | (rotated_bit << 7);
-        cpu.reg.set_8bit(Reg8::A, val);
-        cpu.reg.set_flag(Flag::Z, false);
-        cpu.reg.set_flag(Flag::N, false);
-        cpu.reg.set_flag(Flag::H, false);
-        cpu.reg.set_flag(Flag::C, carry == 1);
-        cpu.inc_mtime(4);
+        cpu.set_reg8(Reg8::A, val);
+        cpu.set_flag(Flag::Z, false);
+        cpu.set_flag(Flag::N, false);
+        cpu.set_flag(Flag::H, false);
+        cpu.set_flag(Flag::C, carry == 1);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         "RRA".to_string()
     }
 }
@@ -161,14 +161,14 @@ pub struct Load8Bit {
 }
 
 impl Instruction for Load8Bit {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        let val = cpu.reg.get_8bit(self.src);
-        cpu.reg.set_8bit(self.dst, val);
-        cpu.inc_mtime(4);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        let val = cpu.get_reg8(self.src);
+        cpu.set_reg8(self.dst, val);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         format!("LD {},{}", self.dst, self.src)
     }
 }
@@ -178,14 +178,14 @@ pub struct Load8BitImmediate {
 }
 
 impl Instruction for Load8BitImmediate {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        let val = bus.read_8bit(cpu.reg.get_pc_offset(1));
-        cpu.reg.inc_pc(2);
-        cpu.reg.set_8bit(self.reg, val);
-        cpu.inc_mtime(8);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        let val = bus.read_8bit(cpu.get_reg16_offset(Reg16::PC, 1));
+        cpu.set_reg16_offset(Reg16::PC, 2);
+        cpu.set_reg8(self.reg, val);
+        cpu.increment_cycle_count(8);
     }
 
-    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+    fn mnemonic(&self, addr: u16, bus: &dyn Address) -> String {
         let val = bus.read_8bit(addr.wrapping_add(1));
         format!("LD {},${:02x}", self.reg, val)
     }
@@ -198,23 +198,23 @@ pub struct Load8BitIndirect {
 }
 
 impl Instruction for Load8BitIndirect {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        let addr = cpu.reg.get_16bit(self.addr_reg);
-        cpu.reg.inc_pc(1);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        let addr = cpu.get_reg16(self.addr_reg);
+        cpu.set_reg16_offset(Reg16::PC, 1);
         match self.direction {
             Direction::ToBus => {
-                let val = cpu.reg.get_8bit(self.reg);
+                let val = cpu.get_reg8(self.reg);
                 bus.write_8bit(addr, val);
             }
             Direction::ToRegister => {
                 let val = bus.read_8bit(addr);
-                cpu.reg.set_8bit(self.reg, val);
+                cpu.set_reg8(self.reg, val);
             }
         }
-        cpu.inc_mtime(8);
+        cpu.increment_cycle_count(8);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         match self.direction {
             Direction::ToBus => format!("LD ({}),{}", self.addr_reg, self.reg),
             Direction::ToRegister => format!("LD {},({})", self.reg, self.addr_reg),
@@ -229,24 +229,24 @@ pub struct Load8BitIndirectIncrement {
 }
 
 impl Instruction for Load8BitIndirectIncrement {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        let addr = cpu.reg.get_16bit(self.addr_reg);
-        cpu.reg.inc_pc(1);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        let addr = cpu.get_reg16(self.addr_reg);
+        cpu.set_reg16_offset(Reg16::PC, 1);
         match self.direction {
             Direction::ToBus => {
-                let val = cpu.reg.get_8bit(self.reg);
+                let val = cpu.get_reg8(self.reg);
                 bus.write_8bit(addr, val);
             }
             Direction::ToRegister => {
                 let val = bus.read_8bit(addr);
-                cpu.reg.set_8bit(self.reg, val);
+                cpu.set_reg8(self.reg, val);
             }
         }
-        cpu.reg.set_16bit(self.addr_reg, addr.wrapping_add(1));
-        cpu.inc_mtime(8);
+        cpu.set_reg16(self.addr_reg, addr.wrapping_add(1));
+        cpu.increment_cycle_count(8);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         match self.direction {
             Direction::ToBus => format!("LD ({}+),{}", self.addr_reg, self.reg),
             Direction::ToRegister => format!("LD {},({}+)", self.reg, self.addr_reg),
@@ -261,24 +261,24 @@ pub struct Load8BitIndirectDecrement {
 }
 
 impl Instruction for Load8BitIndirectDecrement {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        let addr = cpu.reg.get_16bit(self.addr_reg);
-        cpu.reg.inc_pc(1);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        let addr = cpu.get_reg16(self.addr_reg);
+        cpu.set_reg16_offset(Reg16::PC, 1);
         match self.direction {
             Direction::ToBus => {
-                let val = cpu.reg.get_8bit(self.reg);
+                let val = cpu.get_reg8(self.reg);
                 bus.write_8bit(addr, val);
             }
             Direction::ToRegister => {
                 let val = bus.read_8bit(addr);
-                cpu.reg.set_8bit(self.reg, val);
+                cpu.set_reg8(self.reg, val);
             }
         }
-        cpu.reg.set_16bit(self.addr_reg, addr.wrapping_sub(1));
-        cpu.inc_mtime(8);
+        cpu.set_reg16(self.addr_reg, addr.wrapping_sub(1));
+        cpu.increment_cycle_count(8);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         match self.direction {
             Direction::ToBus => format!("LD ({}-),{}", self.addr_reg, self.reg),
             Direction::ToRegister => format!("LD {},({}-)", self.reg, self.addr_reg),
@@ -291,23 +291,23 @@ pub struct LoadHigh {
 }
 
 impl Instruction for LoadHigh {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        let addr = 0xff00 + (bus.read_8bit(cpu.reg.get_pc_offset(1)) as u16);
-        cpu.reg.inc_pc(2);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        let addr = 0xff00 + (bus.read_8bit(cpu.get_reg16_offset(Reg16::PC, 1)) as u16);
+        cpu.set_reg16_offset(Reg16::PC, 2);
         match self.direction {
             Direction::ToBus => {
-                let val = cpu.reg.get_8bit(Reg8::A);
+                let val = cpu.get_reg8(Reg8::A);
                 bus.write_8bit(addr, val);
             }
             Direction::ToRegister => {
                 let val = bus.read_8bit(addr);
-                cpu.reg.set_8bit(Reg8::A, val);
+                cpu.set_reg8(Reg8::A, val);
             }
         }
-        cpu.inc_mtime(12);
+        cpu.increment_cycle_count(12);
     }
 
-    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+    fn mnemonic(&self, addr: u16, bus: &dyn Address) -> String {
         let offset = bus.read_8bit(addr.wrapping_add(1));
         match self.direction {
             Direction::ToBus => format!("LDH (${:02x}),A", offset),
@@ -321,14 +321,14 @@ pub struct Load16BitImmediate {
 }
 
 impl Instruction for Load16BitImmediate {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        let val = bus.read_16bit(cpu.reg.get_pc_offset(1));
-        cpu.reg.inc_pc(3);
-        cpu.reg.set_16bit(self.reg, val);
-        cpu.inc_mtime(12);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        let val = bus.read_16bit(cpu.get_reg16_offset(Reg16::PC, 1));
+        cpu.set_reg16_offset(Reg16::PC, 3);
+        cpu.set_reg16(self.reg, val);
+        cpu.increment_cycle_count(12);
     }
 
-    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+    fn mnemonic(&self, addr: u16, bus: &dyn Address) -> String {
         let val = bus.read_16bit(addr.wrapping_add(1));
         format!("LD {},${:04x}", self.reg, val)
     }
@@ -337,15 +337,15 @@ impl Instruction for Load16BitImmediate {
 pub struct Load16BitIndirectImmediate;
 
 impl Instruction for Load16BitIndirectImmediate {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        let addr = bus.read_16bit(cpu.reg.get_pc_offset(1));
-        cpu.reg.inc_pc(3);
-        let val = cpu.reg.get_16bit(Reg16::SP);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        let addr = bus.read_16bit(cpu.get_reg16_offset(Reg16::PC, 1));
+        cpu.set_reg16_offset(Reg16::PC, 3);
+        let val = cpu.get_reg16(Reg16::SP);
         bus.write_16bit(addr, val);
-        cpu.inc_mtime(20);
+        cpu.increment_cycle_count(20);
     }
 
-    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+    fn mnemonic(&self, addr: u16, bus: &dyn Address) -> String {
         let addr = bus.read_16bit(addr.wrapping_add(1));
         format!("LD (${:04x}),SP", addr)
     }
@@ -360,12 +360,12 @@ pub enum Condition {
 }
 
 impl Condition {
-    fn is_met(self, cpu: &CPU) -> bool {
+    fn is_met(self, cpu: &mut dyn Compute) -> bool {
         match self {
-            Condition::Z => cpu.reg.get_flag(Flag::Z) == true,
-            Condition::NZ => cpu.reg.get_flag(Flag::Z) == false,
-            Condition::C => cpu.reg.get_flag(Flag::C) == true,
-            Condition::NC => cpu.reg.get_flag(Flag::C) == false,
+            Condition::Z => cpu.get_flag(Flag::Z) == true,
+            Condition::NZ => cpu.get_flag(Flag::Z) == false,
+            Condition::C => cpu.get_flag(Flag::C) == true,
+            Condition::NC => cpu.get_flag(Flag::C) == false,
         }
     }
 }
@@ -390,17 +390,17 @@ pub struct JumpImmediate {
 }
 
 impl Instruction for JumpImmediate {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        let addr = bus.read_16bit(cpu.reg.get_pc_offset(1));
-        cpu.reg.inc_pc(3);
-        cpu.inc_mtime(12);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        let addr = bus.read_16bit(cpu.get_reg16_offset(Reg16::PC, 1));
+        cpu.set_reg16_offset(Reg16::PC, 3);
+        cpu.increment_cycle_count(12);
         if self.condition.map_or(true, |c| c.is_met(cpu)) {
-            cpu.reg.set_pc(addr);
-            cpu.inc_mtime(4);
+            cpu.set_reg16(Reg16::PC, addr);
+            cpu.increment_cycle_count(4);
         }
     }
 
-    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+    fn mnemonic(&self, addr: u16, bus: &dyn Address) -> String {
         let addr = bus.read_16bit(addr.wrapping_add(1));
         match self.condition {
             None => format!("JP ${:04x}", addr),
@@ -414,17 +414,17 @@ pub struct JumpRelative {
 }
 
 impl Instruction for JumpRelative {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        let offset = bus.read_8bit(cpu.reg.get_pc_offset(1)) as i8;
-        cpu.reg.inc_pc(2);
-        cpu.inc_mtime(8);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        let offset = bus.read_8bit(cpu.get_reg16_offset(Reg16::PC, 1)) as i8;
+        cpu.set_reg16_offset(Reg16::PC, 2);
+        cpu.increment_cycle_count(8);
         if self.condition.map_or(true, |c| c.is_met(cpu)) {
-            cpu.reg.set_pc_offset(offset);
-            cpu.inc_mtime(4);
+            cpu.set_reg16_offset(Reg16::PC, offset);
+            cpu.increment_cycle_count(4);
         }
     }
 
-    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+    fn mnemonic(&self, addr: u16, bus: &dyn Address) -> String {
         let offset = bus.read_8bit(addr.wrapping_add(1)) as i8;
         let formatted_offset = if offset > 0 {
             format!("+{:02x}", offset.abs())
@@ -444,19 +444,19 @@ pub struct Call {
 }
 
 impl Instruction for Call {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        let addr = bus.read_16bit(cpu.reg.get_pc_offset(1));
-        cpu.reg.inc_pc(3);
-        cpu.inc_mtime(12);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        let addr = bus.read_16bit(cpu.get_reg16_offset(Reg16::PC, 1));
+        cpu.set_reg16_offset(Reg16::PC, 3);
+        cpu.increment_cycle_count(12);
         if self.condition.map_or(true, |c| c.is_met(cpu)) {
-            cpu.reg.set_sp_offset(-2);
-            bus.write_16bit(cpu.reg.get_sp(), cpu.reg.get_pc());
-            cpu.reg.set_pc(addr);
-            cpu.inc_mtime(12);
+            cpu.set_reg16_offset(Reg16::SP, -2);
+            bus.write_16bit(cpu.get_reg16(Reg16::SP), cpu.get_reg16(Reg16::PC));
+            cpu.set_reg16(Reg16::PC, addr);
+            cpu.increment_cycle_count(12);
         }
     }
 
-    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+    fn mnemonic(&self, addr: u16, bus: &dyn Address) -> String {
         let call_addr = bus.read_16bit(addr.wrapping_add(1));
         match self.condition {
             None => format!("CALL ${:04x}", call_addr),
@@ -470,20 +470,20 @@ pub struct Return {
 }
 
 impl Instruction for Return {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        cpu.inc_mtime(8);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        cpu.increment_cycle_count(8);
         if self.condition.map_or(true, |c| c.is_met(cpu)) {
-            cpu.reg.set_pc(bus.read_16bit(cpu.reg.get_sp()));
-            cpu.reg.set_sp_offset(2);
-            cpu.inc_mtime(match self.condition {
+            cpu.set_reg16(Reg16::PC, bus.read_16bit(cpu.get_reg16(Reg16::SP)));
+            cpu.set_reg16_offset(Reg16::SP, 2);
+            cpu.increment_cycle_count(match self.condition {
                 None => 8,
                 Some(_) => 12,
             });
         }
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         match self.condition {
             None => "RET".to_string(),
             Some(cond) => format!("RET {}", cond),
@@ -494,15 +494,15 @@ impl Instruction for Return {
 pub struct ReturnInterrupt;
 
 impl Instruction for ReturnInterrupt {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        cpu.ime = true;
-        cpu.reg.set_pc(bus.read_16bit(cpu.reg.get_sp()));
-        cpu.reg.set_sp_offset(2);
-        cpu.inc_mtime(16);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        cpu.set_ime(true);
+        cpu.set_reg16(Reg16::PC, bus.read_16bit(cpu.get_reg16(Reg16::SP)));
+        cpu.set_reg16_offset(Reg16::SP, 2);
+        cpu.increment_cycle_count(16);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         "RETI".to_string()
     }
 }
@@ -510,18 +510,18 @@ impl Instruction for ReturnInterrupt {
 pub struct CompareImmediate;
 
 impl Instruction for CompareImmediate {
-    fn execute(&self, cpu: &mut CPU, bus: &mut AddressBus) {
-        let acc = cpu.reg.get_8bit(Reg8::A);
-        let val = bus.read_8bit(cpu.reg.get_pc_offset(1));
-        cpu.reg.inc_pc(2);
-        cpu.reg.set_flag(Flag::Z, acc == val);
-        cpu.reg.set_flag(Flag::N, true);
-        cpu.reg.set_flag(Flag::H, (acc & 0x0f) < (val & 0x0f));
-        cpu.reg.set_flag(Flag::C, acc < val);
-        cpu.inc_mtime(4);
+    fn execute(&self, cpu: &mut dyn Compute, bus: &mut dyn Address) {
+        let acc = cpu.get_reg8(Reg8::A);
+        let val = bus.read_8bit(cpu.get_reg16_offset(Reg16::PC, 1));
+        cpu.set_reg16_offset(Reg16::PC, 2);
+        cpu.set_flag(Flag::Z, acc == val);
+        cpu.set_flag(Flag::N, true);
+        cpu.set_flag(Flag::H, (acc & 0x0f) < (val & 0x0f));
+        cpu.set_flag(Flag::C, acc < val);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, addr: u16, bus: &AddressBus) -> String {
+    fn mnemonic(&self, addr: u16, bus: &dyn Address) -> String {
         let val = bus.read_8bit(addr.wrapping_add(1));
         format!("CP ${:02x}", val)
     }
@@ -532,21 +532,21 @@ pub struct Add {
 }
 
 impl Instruction for Add {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        let acc = cpu.reg.get_8bit(Reg8::A);
-        let amount = cpu.reg.get_8bit(self.reg);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        let acc = cpu.get_reg8(Reg8::A);
+        let amount = cpu.get_reg8(self.reg);
         let (val, carry) = acc.overflowing_add(amount);
         let halfcarry = ((acc & 0x0f) + (amount & 0x0f)) & 0x10 == 0x10;
-        cpu.reg.inc_pc(1);
-        cpu.reg.set_8bit(Reg8::A, val);
-        cpu.reg.set_flag(Flag::Z, val == 0);
-        cpu.reg.set_flag(Flag::N, false);
-        cpu.reg.set_flag(Flag::H, halfcarry);
-        cpu.reg.set_flag(Flag::C, carry);
-        cpu.inc_mtime(4);
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        cpu.set_reg8(Reg8::A, val);
+        cpu.set_flag(Flag::Z, val == 0);
+        cpu.set_flag(Flag::N, false);
+        cpu.set_flag(Flag::H, halfcarry);
+        cpu.set_flag(Flag::C, carry);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         format!("ADD {}", self.reg)
     }
 }
@@ -556,30 +556,29 @@ pub struct AddWithCarry {
 }
 
 impl Instruction for AddWithCarry {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        let acc = cpu.reg.get_8bit(Reg8::A);
-        let (amount, carry) =
-            cpu.reg
-                .get_8bit(self.reg)
-                .overflowing_add(match cpu.reg.get_flag(Flag::C) {
-                    true => 1,
-                    false => 0,
-                });
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        let acc = cpu.get_reg8(Reg8::A);
+        let (amount, carry) = cpu
+            .get_reg8(self.reg)
+            .overflowing_add(match cpu.get_flag(Flag::C) {
+                true => 1,
+                false => 0,
+            });
         let (val, carry) = match carry {
             true => (acc.wrapping_add(amount), true),
             false => acc.overflowing_add(amount),
         };
         let halfcarry = ((acc & 0x0f) + (amount & 0x0f)) & 0x10 == 0x10;
-        cpu.reg.set_8bit(Reg8::A, val);
-        cpu.reg.set_flag(Flag::Z, val == 0);
-        cpu.reg.set_flag(Flag::N, false);
-        cpu.reg.set_flag(Flag::H, halfcarry);
-        cpu.reg.set_flag(Flag::C, carry);
-        cpu.inc_mtime(4);
+        cpu.set_reg8(Reg8::A, val);
+        cpu.set_flag(Flag::Z, val == 0);
+        cpu.set_flag(Flag::N, false);
+        cpu.set_flag(Flag::H, halfcarry);
+        cpu.set_flag(Flag::C, carry);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         format!("ADC {}", self.reg)
     }
 }
@@ -589,19 +588,19 @@ pub struct ExclusiveOr {
 }
 
 impl Instruction for ExclusiveOr {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        let acc = cpu.reg.get_8bit(Reg8::A);
-        let val = acc ^ cpu.reg.get_8bit(self.reg);
-        cpu.reg.inc_pc(1);
-        cpu.reg.set_8bit(Reg8::A, val);
-        cpu.reg.set_flag(Flag::Z, val == 0);
-        cpu.reg.set_flag(Flag::N, false);
-        cpu.reg.set_flag(Flag::H, false);
-        cpu.reg.set_flag(Flag::C, false);
-        cpu.inc_mtime(4);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        let acc = cpu.get_reg8(Reg8::A);
+        let val = acc ^ cpu.get_reg8(self.reg);
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        cpu.set_reg8(Reg8::A, val);
+        cpu.set_flag(Flag::Z, val == 0);
+        cpu.set_flag(Flag::N, false);
+        cpu.set_flag(Flag::H, false);
+        cpu.set_flag(Flag::C, false);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         format!("XOR {}", self.reg)
     }
 }
@@ -611,19 +610,18 @@ pub struct Increment8Bit {
 }
 
 impl Instruction for Increment8Bit {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        let last = cpu.reg.get_8bit(self.reg);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        let last = cpu.get_reg8(self.reg);
         let val = last.wrapping_sub(1);
-        cpu.reg.set_8bit(self.reg, val);
-        cpu.reg.set_flag(Flag::Z, val == 0);
-        cpu.reg.set_flag(Flag::N, false);
-        cpu.reg
-            .set_flag(Flag::H, ((last & 0x0f) + (val & 0x0f)) & 0x10 == 0x10);
-        cpu.inc_mtime(4);
+        cpu.set_reg8(self.reg, val);
+        cpu.set_flag(Flag::Z, val == 0);
+        cpu.set_flag(Flag::N, false);
+        cpu.set_flag(Flag::H, ((last & 0x0f) + (val & 0x0f)) & 0x10 == 0x10);
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         format!("INC {}", self.reg)
     }
 }
@@ -633,18 +631,18 @@ pub struct Decrement8Bit {
 }
 
 impl Instruction for Decrement8Bit {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        let last = cpu.reg.get_8bit(self.reg);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        let last = cpu.get_reg8(self.reg);
         let val = last.wrapping_sub(1);
-        cpu.reg.set_8bit(self.reg, val);
-        cpu.reg.set_flag(Flag::Z, val == 0);
-        cpu.reg.set_flag(Flag::N, true);
-        cpu.reg.set_flag(Flag::H, (last & 0x0f) < (val & 0x0f));
-        cpu.inc_mtime(4);
+        cpu.set_reg8(self.reg, val);
+        cpu.set_flag(Flag::Z, val == 0);
+        cpu.set_flag(Flag::N, true);
+        cpu.set_flag(Flag::H, (last & 0x0f) < (val & 0x0f));
+        cpu.increment_cycle_count(4);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         format!("DEC {}", self.reg)
     }
 }
@@ -654,20 +652,20 @@ pub struct Add16Bit {
 }
 
 impl Instruction for Add16Bit {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        let acc = cpu.reg.get_16bit(Reg16::HL);
-        let amount = cpu.reg.get_16bit(self.reg);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        let acc = cpu.get_reg16(Reg16::HL);
+        let amount = cpu.get_reg16(self.reg);
         let (val, carry) = acc.overflowing_add(amount);
         let halfcarry = ((acc & 0x00ff) + (amount & 0x00ff)) & 0x0100 == 0x0100;
-        cpu.reg.inc_pc(1);
-        cpu.reg.set_16bit(Reg16::HL, val);
-        cpu.reg.set_flag(Flag::N, false);
-        cpu.reg.set_flag(Flag::H, halfcarry);
-        cpu.reg.set_flag(Flag::C, carry);
-        cpu.inc_mtime(8);
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        cpu.set_reg16(Reg16::HL, val);
+        cpu.set_flag(Flag::N, false);
+        cpu.set_flag(Flag::H, halfcarry);
+        cpu.set_flag(Flag::C, carry);
+        cpu.increment_cycle_count(8);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         format!("ADD HL,{}", self.reg)
     }
 }
@@ -677,15 +675,15 @@ pub struct Increment16Bit {
 }
 
 impl Instruction for Increment16Bit {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        let last = cpu.reg.get_16bit(self.reg);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        let last = cpu.get_reg16(self.reg);
         let val = last.wrapping_add(1);
-        cpu.reg.set_16bit(self.reg, val);
-        cpu.inc_mtime(8);
+        cpu.set_reg16(self.reg, val);
+        cpu.increment_cycle_count(8);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         format!("INC {}", self.reg)
     }
 }
@@ -695,519 +693,886 @@ pub struct Decrement16Bit {
 }
 
 impl Instruction for Decrement16Bit {
-    fn execute(&self, cpu: &mut CPU, _bus: &mut AddressBus) {
-        cpu.reg.inc_pc(1);
-        let last = cpu.reg.get_16bit(self.reg);
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        let last = cpu.get_reg16(self.reg);
         let val = last.wrapping_sub(1);
-        cpu.reg.set_16bit(self.reg, val);
-        cpu.inc_mtime(8);
+        cpu.set_reg16(self.reg, val);
+        cpu.increment_cycle_count(8);
     }
 
-    fn mnemonic(&self, _addr: u16, _bus: &AddressBus) -> String {
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
         format!("DEC {}", self.reg)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    //! Instruction tests should follow this general format:
+    //!
+    //! ```
+    //! #[test]
+    //! fn test_foo() {
+    //!     let inst = &...;
+    //!
+    //!     let mut cpu = CpuSpy::wrap(Cpu::reset());
+    //!     // ...
+    //!     cpu.record_changes();
+    //!
+    //!     let mut bus = BusSpy::wrap(FakeBus::new());
+    //!     // ...
+    //!     bus.record_changes();
+    //!
+    //!     let mnemonic = inst.mnemonic(0x0000, &bus);
+    //!     assert_eq!(mnemonic, "...");
+    //!
+    //!     inst.execute(&mut cpu, &mut bus);
+    //!     cpu.assert_expectations();
+    //!     bus.assert_expectations();
+    //! }
+    //! ```
+
     use super::*;
-
-    fn fixtures() -> (CPU, AddressBus) {
-        let cpu = CPU::reset();
-        let bus = AddressBus::from_raw(&[0x00, 0xaa, 0xc6]);
-        (cpu, bus)
-    }
-
-    fn test_instruction(
-        inst: &dyn Instruction,
-        mut cpu: CPU,
-        mut bus: AddressBus,
-    ) -> (CPU, AddressBus, String) {
-        let mnemonic = inst.mnemonic(0x0000, &mut bus);
-        inst.execute(&mut cpu, &mut bus);
-        (cpu, bus, mnemonic)
-    }
+    use crate::bus::FakeBus;
+    use crate::cpu::Cpu;
+    use crate::spies::{BusSpy, CpuSpy};
 
     #[test]
     fn test_nop() {
-        let (cpu, bus) = fixtures();
-        let (cpu, _bus, mnemonic) = test_instruction(&NOP, cpu, bus);
+        let inst = &NOP;
 
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "NOP");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.mtime, 4);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_disable_interrupts() {
-        let (cpu, bus) = fixtures();
-        let (cpu, _bus, mnemonic) = test_instruction(&DisableInterrupts, cpu, bus);
+        let inst = &DisableInterrupts;
 
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.expect_ime(false);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "DI");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.ime, false);
-        assert_eq!(cpu.mtime, 4);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_enable_interrupts() {
-        let (mut cpu, bus) = fixtures();
-        cpu.ime = false;
-        let (cpu, _bus, mnemonic) = test_instruction(&EnableInterrupts, cpu, bus);
+        let inst = &EnableInterrupts;
 
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.expect_ime(true);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "EI");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.ime, true);
-        assert_eq!(cpu.mtime, 4);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_stop() {
-        let (cpu, bus) = fixtures();
-        let (cpu, _bus, mnemonic) = test_instruction(&Stop, cpu, bus);
+        let inst = &Stop;
 
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.expect_stop(true);
+        cpu.expect_reg16(Reg16::PC, 0x0002);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "STOP");
-        assert_eq!(cpu.reg.get_pc(), 2);
-        assert_eq!(cpu.stopped, true);
-        assert_eq!(cpu.mtime, 4);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_rotate_left_circular_accumulator() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_8bit(Reg8::A, 0b1000_0000);
-        let (cpu, _bus, mnemonic) = test_instruction(&RotateLeftCircularAccumulator, cpu, bus);
+        let inst = &RotateLeftCircularAccumulator;
 
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0b1000_0000);
+        cpu.expect_reg8(Reg8::A, 0b0000_0001);
+        cpu.expect_flag(Flag::Z, false);
+        cpu.expect_flag(Flag::N, false);
+        cpu.expect_flag(Flag::H, false);
+        cpu.expect_flag(Flag::C, true);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "RLCA");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.mtime, 4);
-        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0b0000_0001);
-        assert_eq!(cpu.reg.get_flag(Flag::C), true);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_rotate_left_accumulator() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_8bit(Reg8::A, 0b0000_0000);
-        cpu.reg.set_flag(Flag::C, true);
-        let (cpu, _bus, mnemonic) = test_instruction(&RotateLeftAccumulator, cpu, bus);
+        let inst = &RotateLeftAccumulator;
 
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0b0000_0000);
+        cpu.set_flag(Flag::C, true);
+        cpu.expect_reg8(Reg8::A, 0b0000_0001);
+        cpu.expect_flag(Flag::Z, false);
+        cpu.expect_flag(Flag::N, false);
+        cpu.expect_flag(Flag::H, false);
+        cpu.expect_flag(Flag::C, false);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "RLA");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.mtime, 4);
-        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0b0000_0001);
-        assert_eq!(cpu.reg.get_flag(Flag::C), false);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_rotate_right_circular_accumulator() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_8bit(Reg8::A, 0b0000_0001);
-        let (cpu, _bus, mnemonic) = test_instruction(&RotateRightCircularAccumulator, cpu, bus);
+        let inst = &RotateRightCircularAccumulator;
 
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0b0000_0001);
+        cpu.expect_reg8(Reg8::A, 0b1000_0000);
+        cpu.expect_flag(Flag::Z, false);
+        cpu.expect_flag(Flag::N, false);
+        cpu.expect_flag(Flag::H, false);
+        cpu.expect_flag(Flag::C, true);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "RRCA");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.mtime, 4);
-        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0b1000_0000);
-        assert_eq!(cpu.reg.get_flag(Flag::C), true);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_rotate_right_accumulator() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_8bit(Reg8::A, 0b0000_0000);
-        cpu.reg.set_flag(Flag::C, true);
-        let (cpu, _bus, mnemonic) = test_instruction(&RotateRightAccumulator, cpu, bus);
+        let inst = &RotateRightAccumulator;
 
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0b0000_0000);
+        cpu.set_flag(Flag::C, true);
+        cpu.expect_reg8(Reg8::A, 0b1000_0000);
+        cpu.expect_flag(Flag::Z, false);
+        cpu.expect_flag(Flag::N, false);
+        cpu.expect_flag(Flag::H, false);
+        cpu.expect_flag(Flag::C, false);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "RRA");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.mtime, 4);
-        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0b1000_0000);
-        assert_eq!(cpu.reg.get_flag(Flag::C), false);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_load_8bit() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_8bit(Reg8::A, 0x00);
-        cpu.reg.set_8bit(Reg8::B, 0xff);
         let inst = &Load8Bit {
             dst: Reg8::A,
             src: Reg8::B,
         };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0x00);
+        cpu.set_reg8(Reg8::B, 0xff);
+        cpu.expect_reg8(Reg8::A, 0xff);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "LD A,B");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.mtime, 4);
-        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0xff);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_load_8bit_immediate() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_8bit(Reg8::A, 0x00);
         let inst = &Load8BitImmediate { reg: Reg8::A };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
-        assert_eq!(mnemonic, "LD A,$aa");
-        assert_eq!(cpu.reg.get_pc(), 2);
-        assert_eq!(cpu.mtime, 8);
-        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0xaa);
+        let value = 0xaa;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.expect_reg8(Reg8::A, value);
+        cpu.expect_reg16(Reg16::PC, 0x0002);
+        cpu.expect_cycles(8);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_8bit(0x0001, value);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, format!("LD A,${:02x}", value));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_load_8bit_indirect_to_bus() {
-        let (mut cpu, mut bus) = fixtures();
-        let addr = 0xc000;
-        cpu.reg.set_16bit(Reg16::BC, addr);
-        cpu.reg.set_8bit(Reg8::A, 0xff);
-        bus.write_8bit(addr, 0x00);
         let inst = &Load8BitIndirect {
             direction: Direction::ToBus,
             addr_reg: Reg16::BC,
             reg: Reg8::A,
         };
-        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
 
+        let addr = 0xc000;
+        let value = 0xff;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg16(Reg16::BC, addr);
+        cpu.set_reg8(Reg8::A, value);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(8);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.expect_8bit(addr, value);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "LD (BC),A");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.mtime, 8);
-        assert_eq!(bus.read_8bit(addr), 0xff);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_load_8bit_indirect_to_register() {
-        let (mut cpu, mut bus) = fixtures();
-        let addr = 0xc000;
-        cpu.reg.set_16bit(Reg16::BC, addr);
-        cpu.reg.set_8bit(Reg8::A, 0x00);
-        bus.write_8bit(addr, 0xff);
         let inst = &Load8BitIndirect {
             direction: Direction::ToRegister,
             addr_reg: Reg16::BC,
             reg: Reg8::A,
         };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
+        let addr = 0xc000;
+        let value = 0xff;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg16(Reg16::BC, addr);
+        cpu.expect_reg8(Reg8::A, value);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(8);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_8bit(addr, value);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "LD A,(BC)");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.mtime, 8);
-        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0xff);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_load_8bit_indirect_increment_to_bus() {
-        let (mut cpu, mut bus) = fixtures();
-        let addr = 0xc000;
-        cpu.reg.set_16bit(Reg16::BC, addr);
-        cpu.reg.set_8bit(Reg8::A, 0xff);
-        bus.write_8bit(addr, 0x00);
         let inst = &Load8BitIndirectIncrement {
             direction: Direction::ToBus,
             addr_reg: Reg16::BC,
             reg: Reg8::A,
         };
-        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
 
+        let addr = 0xc000;
+        let value = 0xff;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg16(Reg16::BC, addr);
+        cpu.set_reg8(Reg8::A, value);
+        cpu.expect_reg16(Reg16::BC, addr.wrapping_add(1));
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(8);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.expect_8bit(addr, value);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "LD (BC+),A");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.mtime, 8);
-        assert_eq!(bus.read_8bit(addr), 0xff);
-        assert_eq!(cpu.reg.get_16bit(Reg16::BC), addr.wrapping_add(1));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_load_8bit_indirect_increment_to_register() {
-        let (mut cpu, mut bus) = fixtures();
-        let addr = 0xc000;
-        cpu.reg.set_16bit(Reg16::BC, addr);
-        cpu.reg.set_8bit(Reg8::A, 0x00);
-        bus.write_8bit(addr, 0xff);
         let inst = &Load8BitIndirectIncrement {
             direction: Direction::ToRegister,
             addr_reg: Reg16::BC,
             reg: Reg8::A,
         };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
+        let addr = 0xc000;
+        let value = 0xff;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg16(Reg16::BC, addr);
+        cpu.expect_reg8(Reg8::A, value);
+        cpu.expect_reg16(Reg16::BC, addr.wrapping_add(1));
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(8);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_8bit(addr, value);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "LD A,(BC+)");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.mtime, 8);
-        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0xff);
-        assert_eq!(cpu.reg.get_16bit(Reg16::BC), addr.wrapping_add(1));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_load_8bit_indirect_decrement_to_bus() {
-        let (mut cpu, mut bus) = fixtures();
-        let addr = 0xc000;
-        cpu.reg.set_16bit(Reg16::BC, addr);
-        cpu.reg.set_8bit(Reg8::A, 0xff);
-        bus.write_8bit(addr, 0x00);
         let inst = &Load8BitIndirectDecrement {
             direction: Direction::ToBus,
             addr_reg: Reg16::BC,
             reg: Reg8::A,
         };
-        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
 
+        let addr = 0xc000;
+        let value = 0xff;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg16(Reg16::BC, addr);
+        cpu.set_reg8(Reg8::A, value);
+        cpu.expect_reg16(Reg16::BC, addr.wrapping_sub(1));
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(8);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.expect_8bit(addr, value);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "LD (BC-),A");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.mtime, 8);
-        assert_eq!(bus.read_8bit(addr), 0xff);
-        assert_eq!(cpu.reg.get_16bit(Reg16::BC), addr.wrapping_sub(1));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_load_8bit_indirect_decrement_to_register() {
-        let (mut cpu, mut bus) = fixtures();
-        let addr = 0xc000;
-        cpu.reg.set_16bit(Reg16::BC, addr);
-        cpu.reg.set_8bit(Reg8::A, 0x00);
-        bus.write_8bit(addr, 0xff);
         let inst = &Load8BitIndirectDecrement {
             direction: Direction::ToRegister,
             addr_reg: Reg16::BC,
             reg: Reg8::A,
         };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
+        let addr = 0xc000;
+        let value = 0xff;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg16(Reg16::BC, addr);
+        cpu.expect_reg8(Reg8::A, value);
+        cpu.expect_reg16(Reg16::BC, addr.wrapping_sub(1));
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(8);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_8bit(addr, value);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "LD A,(BC-)");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.mtime, 8);
-        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0xff);
-        assert_eq!(cpu.reg.get_16bit(Reg16::BC), addr.wrapping_sub(1));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_load_high_to_bus() {
-        let (mut cpu, mut bus) = fixtures();
-        cpu.reg.set_8bit(Reg8::A, 0xff);
-        bus.write_8bit(0xffaa, 0x00);
         let inst = &LoadHigh {
             direction: Direction::ToBus,
         };
-        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
 
-        assert_eq!(mnemonic, "LDH ($aa),A");
-        assert_eq!(cpu.reg.get_pc(), 2);
-        assert_eq!(cpu.mtime, 12);
-        assert_eq!(bus.read_16bit(0xffaa), 0xff);
+        let offset = 0xaa;
+        let addr = 0xff00_u16.wrapping_add(offset as u16);
+        let value = 0xff;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, value);
+        cpu.expect_reg16(Reg16::PC, 0x0002);
+        cpu.expect_cycles(12);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_8bit(0x0001, offset);
+        bus.expect_8bit(addr, value);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, format!("LDH (${:02x}),A", offset));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_load_high_to_register() {
-        let (mut cpu, mut bus) = fixtures();
-        cpu.reg.set_8bit(Reg8::A, 0x00);
-        bus.write_8bit(0xffaa, 0xff);
         let inst = &LoadHigh {
             direction: Direction::ToRegister,
         };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
-        assert_eq!(mnemonic, "LDH A,($aa)");
-        assert_eq!(cpu.reg.get_pc(), 2);
-        assert_eq!(cpu.mtime, 12);
-        assert_eq!(cpu.reg.get_8bit(Reg8::A), 0xff);
+        let offset = 0xaa;
+        let addr = 0xff00_u16.wrapping_add(offset as u16);
+        let value = 0xff;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.expect_reg8(Reg8::A, value);
+        cpu.expect_reg16(Reg16::PC, 0x0002);
+        cpu.expect_cycles(12);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_8bit(0x0001, offset);
+        bus.write_8bit(addr, value);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, format!("LDH A,(${:02x})", offset));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_load_16bit_immediate() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_16bit(Reg16::BC, 0x0000);
         let inst = &Load16BitImmediate { reg: Reg16::BC };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
-        assert_eq!(mnemonic, "LD BC,$c6aa");
-        assert_eq!(cpu.reg.get_pc(), 3);
-        assert_eq!(cpu.mtime, 12);
-        assert_eq!(cpu.reg.get_16bit(Reg16::BC), 0xc6aa);
+        let value = 0xffff;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.expect_reg16(Reg16::BC, value);
+        cpu.expect_reg16(Reg16::PC, 0x0003);
+        cpu.expect_cycles(12);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_16bit(0x0001, value);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, format!("LD BC,${:04x}", value));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_load_16bit_indirect_immediate() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_16bit(Reg16::SP, 0xffff);
         let inst = &Load16BitIndirectImmediate;
-        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
 
-        assert_eq!(mnemonic, "LD ($c6aa),SP");
-        assert_eq!(cpu.reg.get_pc(), 3);
-        assert_eq!(cpu.mtime, 20);
-        assert_eq!(bus.read_16bit(0xc6aa), 0xffff);
+        let addr = 0xc6aa;
+        let value = 0xffff;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg16(Reg16::SP, value);
+        cpu.expect_reg16(Reg16::PC, 0x0003);
+        cpu.expect_cycles(20);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_16bit(0x0001, addr);
+        bus.expect_16bit(addr, value);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, format!("LD (${:04x}),SP", addr));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_jump_immediate_no_condition() {
-        let (cpu, bus) = fixtures();
         let inst = &JumpImmediate { condition: None };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
-        assert_eq!(mnemonic, "JP $c6aa");
-        assert_eq!(cpu.reg.get_pc(), 0xc6aa);
-        assert_eq!(cpu.mtime, 16);
+        let addr = 0xc6aa;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.expect_reg16(Reg16::PC, addr);
+        cpu.expect_cycles(16);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_16bit(0x0001, addr);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, format!("JP ${:04x}", addr));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_jump_immediate_condition_met() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_flag(Flag::Z, true);
         let inst = &JumpImmediate {
             condition: Some(Condition::Z),
         };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
-        assert_eq!(mnemonic, "JP Z,$c6aa");
-        assert_eq!(cpu.reg.get_pc(), 0xc6aa);
-        assert_eq!(cpu.mtime, 16);
+        let addr = 0xc6aa;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_flag(Flag::Z, true);
+        cpu.expect_reg16(Reg16::PC, addr);
+        cpu.expect_cycles(16);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_16bit(0x0001, addr);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, format!("JP Z,${:04x}", addr));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_jump_immediate_condition_unmet() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_flag(Flag::Z, false);
         let inst = &JumpImmediate {
             condition: Some(Condition::Z),
         };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
-        assert_eq!(mnemonic, "JP Z,$c6aa");
-        assert_eq!(cpu.reg.get_pc(), 3);
-        assert_eq!(cpu.mtime, 12);
+        let addr = 0xc6aa;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_flag(Flag::Z, false);
+        cpu.expect_reg16(Reg16::PC, 0x0003);
+        cpu.expect_cycles(12);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_16bit(0x0001, addr);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, format!("JP Z,${:04x}", addr));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_jump_relative_no_condition() {
-        let (cpu, bus) = fixtures();
         let inst = &JumpRelative { condition: None };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
-        assert_eq!(mnemonic, "JR $-56");
-        assert_eq!(cpu.reg.get_pc(), 0xffac);
-        assert_eq!(cpu.mtime, 12);
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg16(Reg16::PC, 0x0100);
+        cpu.expect_reg16(Reg16::PC, 0x00f2);
+        cpu.expect_cycles(12);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_8bit(0x0101, 0xf0);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0100, &bus);
+        assert_eq!(mnemonic, "JR $-10");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_jump_relative_condition_met() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_flag(Flag::Z, true);
         let inst = &JumpRelative {
             condition: Some(Condition::Z),
         };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
-        assert_eq!(mnemonic, "JR Z,$-56");
-        assert_eq!(cpu.reg.get_pc(), 0xffac);
-        assert_eq!(cpu.mtime, 12);
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_flag(Flag::Z, true);
+        cpu.set_reg16(Reg16::PC, 0x0100);
+        cpu.expect_reg16(Reg16::PC, 0x00f2);
+        cpu.expect_cycles(12);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_8bit(0x0101, 0xf0);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0100, &bus);
+        assert_eq!(mnemonic, "JR Z,$-10");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_jump_relative_condition_unmet() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_flag(Flag::Z, false);
         let inst = &JumpRelative {
             condition: Some(Condition::Z),
         };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
-        assert_eq!(mnemonic, "JR Z,$-56");
-        assert_eq!(cpu.reg.get_pc(), 2);
-        assert_eq!(cpu.mtime, 8);
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_flag(Flag::Z, false);
+        cpu.set_reg16(Reg16::PC, 0x0100);
+        cpu.expect_reg16(Reg16::PC, 0x0102);
+        cpu.expect_cycles(8);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_8bit(0x0101, 0xf0);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0100, &bus);
+        assert_eq!(mnemonic, "JR Z,$-10");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_call_no_condition() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_sp(0xc6ff);
         let inst = &Call { condition: None };
-        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
-        let top_of_stack = 0xc6fd;
 
-        assert_eq!(mnemonic, "CALL $c6aa");
-        assert_eq!(cpu.reg.get_pc(), 0xc6aa);
-        assert_eq!(cpu.reg.get_sp(), top_of_stack);
-        assert_eq!(bus.read_16bit(top_of_stack), 3);
-        assert_eq!(cpu.mtime, 24);
+        let jump_addr = 0x0100;
+        let return_addr = 0x0003;
+        let old_stack_pointer: u16 = 0xc6ff;
+        let new_stack_pointer = old_stack_pointer.wrapping_sub(2);
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg16(Reg16::SP, old_stack_pointer);
+        cpu.expect_reg16(Reg16::SP, new_stack_pointer);
+        cpu.expect_reg16(Reg16::PC, jump_addr);
+        cpu.expect_cycles(24);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_16bit(0x0001, jump_addr);
+        bus.expect_16bit(new_stack_pointer, return_addr);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, format!("CALL ${:04x}", jump_addr));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_call_condition_met() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_sp(0xc6ff);
-        cpu.reg.set_flag(Flag::Z, true);
         let inst = &Call {
             condition: Some(Condition::Z),
         };
-        let (cpu, bus, mnemonic) = test_instruction(inst, cpu, bus);
-        let top_of_stack = 0xc6fd;
 
-        assert_eq!(mnemonic, "CALL Z,$c6aa");
-        assert_eq!(cpu.reg.get_pc(), 0xc6aa);
-        assert_eq!(cpu.reg.get_sp(), top_of_stack);
-        assert_eq!(bus.read_16bit(top_of_stack), 3);
-        assert_eq!(cpu.mtime, 24);
+        let jump_addr = 0x0100;
+        let return_addr = 0x0003;
+        let old_stack_pointer: u16 = 0xc6ff;
+        let new_stack_pointer = old_stack_pointer.wrapping_sub(2);
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg16(Reg16::SP, old_stack_pointer);
+        cpu.set_flag(Flag::Z, true);
+        cpu.expect_reg16(Reg16::SP, new_stack_pointer);
+        cpu.expect_reg16(Reg16::PC, jump_addr);
+        cpu.expect_cycles(24);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_16bit(0x0001, jump_addr);
+        bus.expect_16bit(new_stack_pointer, return_addr);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, format!("CALL Z,${:04x}", jump_addr));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_call_condition_unmet() {
-        let (mut cpu, bus) = fixtures();
-        cpu.reg.set_flag(Flag::Z, false);
         let inst = &Call {
             condition: Some(Condition::Z),
         };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
-        assert_eq!(mnemonic, "CALL Z,$c6aa");
-        assert_eq!(cpu.reg.get_pc(), 3);
-        assert_eq!(cpu.mtime, 12);
+        let jump_addr = 0x0100;
+        let stack_pointer: u16 = 0xc6ff;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg16(Reg16::SP, stack_pointer);
+        cpu.expect_reg16(Reg16::PC, 0x0003);
+        cpu.expect_cycles(12);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_16bit(0x0001, jump_addr);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, format!("CALL Z,${:04x}", jump_addr));
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_return_no_condition() {
-        let (mut cpu, mut bus) = fixtures();
-        cpu.reg.set_sp(0xc6fd);
-        bus.write_16bit(0xc6fd, 0xcfaa);
         let inst = &Return { condition: None };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg16(Reg16::SP, 0xc6fd);
+        cpu.expect_reg16(Reg16::SP, 0xc6ff);
+        cpu.expect_reg16(Reg16::PC, 0x0100);
+        cpu.expect_cycles(16);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_16bit(0xc6fd, 0x0100);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "RET");
-        assert_eq!(cpu.reg.get_pc(), 0xcfaa);
-        assert_eq!(cpu.reg.get_sp(), 0xc6ff);
-        assert_eq!(cpu.mtime, 16);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_return_condition_met() {
-        let (mut cpu, mut bus) = fixtures();
-        cpu.reg.set_sp(0xc6fd);
-        bus.write_16bit(0xc6fd, 0xcfaa);
-        cpu.reg.set_flag(Flag::Z, true);
         let inst = &Return {
             condition: Some(Condition::Z),
         };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_flag(Flag::Z, true);
+        cpu.set_reg16(Reg16::SP, 0xc6fd);
+        cpu.expect_reg16(Reg16::SP, 0xc6ff);
+        cpu.expect_reg16(Reg16::PC, 0x0100);
+        cpu.expect_cycles(20);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_16bit(0xc6fd, 0x0100);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "RET Z");
-        assert_eq!(cpu.reg.get_pc(), 0xcfaa);
-        assert_eq!(cpu.reg.get_sp(), 0xc6ff);
-        assert_eq!(cpu.mtime, 20);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 
     #[test]
     fn test_return_condition_unmet() {
-        let (mut cpu, mut bus) = fixtures();
-        cpu.reg.set_sp(0xc6fd);
-        bus.write_16bit(0xc6fd, 0xcfaa);
-        cpu.reg.set_flag(Flag::Z, false);
         let inst = &Return {
             condition: Some(Condition::Z),
         };
-        let (cpu, _bus, mnemonic) = test_instruction(inst, cpu, bus);
 
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_flag(Flag::Z, false);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(8);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.write_16bit(0xc6fd, 0x0100);
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "RET Z");
-        assert_eq!(cpu.reg.get_pc(), 1);
-        assert_eq!(cpu.reg.get_sp(), 0xc6fd);
-        assert_eq!(cpu.mtime, 8);
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
     }
 }

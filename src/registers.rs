@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Reg8 {
     A,
     B,
@@ -29,7 +29,7 @@ impl Display for Reg8 {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Reg16 {
     AF,
     BC,
@@ -56,7 +56,7 @@ impl Display for Reg16 {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Flag {
     Z = 0b1000_0000,
     N = 0b0100_0000,
@@ -193,45 +193,6 @@ impl Registers {
         } else {
             self.f &= !(flag as u8);
         }
-    }
-
-    pub fn get_pc_offset(&self, offset: i8) -> u16 {
-        ((self.pc as i16).wrapping_add(offset as i16)) as u16
-    }
-
-    pub fn set_pc_offset(&mut self, offset: i8) {
-        self.pc = self.get_pc_offset(offset);
-    }
-
-    pub fn get_pc(&self) -> u16 {
-        self.pc
-    }
-
-    pub fn set_pc(&mut self, value: u16) {
-        self.pc = value;
-    }
-
-    pub fn get_sp_offset(&self, offset: i8) -> u16 {
-        ((self.sp as i16).wrapping_add(offset as i16)) as u16
-    }
-
-    pub fn set_sp_offset(&mut self, offset: i8) {
-        self.sp = self.get_sp_offset(offset);
-    }
-
-    pub fn get_sp(&self) -> u16 {
-        self.sp
-    }
-
-    pub fn set_sp(&mut self, value: u16) {
-        self.sp = value;
-    }
-
-    // While this functionality could be achieved with `self.set_pc_offset`, this seems like it
-    // ought to be faster since it doesn't do any type casting. Need to make sure that's actually
-    // the case.
-    pub fn inc_pc(&mut self, amount: u16) {
-        self.pc = self.pc.wrapping_add(amount);
     }
 }
 
