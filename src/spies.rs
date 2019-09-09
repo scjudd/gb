@@ -211,7 +211,10 @@ impl Compute for CpuSpy {
     }
 
     fn increment_cycle_count(&mut self, amount: u64) {
-        self.cycles_changed = true;
+        if self.recording {
+            self.cycles_changed = true;
+        }
+
         self.cpu.increment_cycle_count(amount);
     }
 
@@ -220,6 +223,10 @@ impl Compute for CpuSpy {
     }
 
     fn set_ime(&mut self, set: bool) {
+        if self.recording {
+            self.ime_changed = true;
+        }
+
         self.cpu.set_ime(set);
     }
 
@@ -228,6 +235,10 @@ impl Compute for CpuSpy {
     }
 
     fn set_stopped(&mut self, set: bool) {
+        if self.recording {
+            self.stop_changed = true;
+        }
+
         self.cpu.set_stopped(set);
     }
 }
