@@ -1575,4 +1575,112 @@ mod tests {
         cpu.assert_expectations();
         bus.assert_expectations();
     }
+
+    #[test]
+    fn test_add() {
+        let inst = &Add { reg: Reg8::B };
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0x10);
+        cpu.set_reg8(Reg8::B, 0x20);
+        cpu.expect_reg8(Reg8::A, 0x30);
+        cpu.expect_flag(Flag::Z, false);
+        cpu.expect_flag(Flag::N, false);
+        cpu.expect_flag(Flag::H, false);
+        cpu.expect_flag(Flag::C, false);
+        cpu.expect_cycles(4);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, "ADD B");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
+    }
+
+    #[test]
+    fn test_add_correctly_sets_zero_flag() {
+        let inst = &Add { reg: Reg8::B };
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0x00);
+        cpu.set_reg8(Reg8::B, 0x00);
+        cpu.expect_reg8(Reg8::A, 0x00);
+        cpu.expect_flag(Flag::Z, true);
+        cpu.expect_flag(Flag::N, false);
+        cpu.expect_flag(Flag::H, false);
+        cpu.expect_flag(Flag::C, false);
+        cpu.expect_cycles(4);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, "ADD B");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
+    }
+
+    #[test]
+    fn test_add_correctly_sets_halfcarry_flag() {
+        let inst = &Add { reg: Reg8::B };
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0x0f);
+        cpu.set_reg8(Reg8::B, 0x01);
+        cpu.expect_reg8(Reg8::A, 0x10);
+        cpu.expect_flag(Flag::Z, false);
+        cpu.expect_flag(Flag::N, false);
+        cpu.expect_flag(Flag::H, true);
+        cpu.expect_flag(Flag::C, false);
+        cpu.expect_cycles(4);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, "ADD B");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
+    }
+
+    #[test]
+    fn test_add_correctly_sets_carry_flag() {
+        let inst = &Add { reg: Reg8::B };
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0x10);
+        cpu.set_reg8(Reg8::B, 0xf1);
+        cpu.expect_reg8(Reg8::A, 0x01);
+        cpu.expect_flag(Flag::Z, false);
+        cpu.expect_flag(Flag::N, false);
+        cpu.expect_flag(Flag::H, false);
+        cpu.expect_flag(Flag::C, true);
+        cpu.expect_cycles(4);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, "ADD B");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
+    }
 }
