@@ -706,6 +706,40 @@ impl Instruction for Decrement16Bit {
     }
 }
 
+pub struct DecimalAdjustAccumulator;
+
+impl Instruction for DecimalAdjustAccumulator {
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        let mut accumulator = cpu.get_reg8(Reg8::A);
+
+        if !cpu.get_flag(Flag::N) {
+            if cpu.get_flag(Flag::C) || accumulator > 0x99 {
+                accumulator += 0x60;
+                cpu.set_flag(Flag::C, true);
+            }
+            if cpu.get_flag(Flag::H) || (accumulator & 0x0f) > 0x09 {
+                accumulator += 0x06;
+            }
+        } else {
+            if cpu.get_flag(Flag::C) {
+                accumulator -= 0x60;
+            }
+            if cpu.get_flag(Flag::H) {
+                accumulator -= 0x06;
+            }
+        }
+
+        cpu.set_reg8(Reg8::A, accumulator);
+        cpu.set_flag(Flag::Z, accumulator == 0);
+        cpu.set_flag(Flag::H, false);
+        cpu.set_reg16_offset(Reg16::PC, 1)
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
+        "DAA".to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     //! Instruction tests should follow this general format:
@@ -1678,6 +1712,107 @@ mod tests {
 
         let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "ADD B");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
+    }
+
+    #[test]
+    fn test_decimal_adjust_accumulator() {
+        let inst = &DecimalAdjustAccumulator;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0x0a);
+        cpu.expect_reg8(Reg8::A, 0x10);
+        cpu.expect_flag(Flag::Z, false);
+        cpu.expect_flag(Flag::H, false);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, "DAA");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
+    }
+
+    #[test]
+    fn test_decimal_adjust_accumulator_with_negative_flag() {
+        let inst = &DecimalAdjustAccumulator;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0x8b);
+        cpu.set_flag(Flag::N, true);
+        cpu.set_flag(Flag::H, true);
+        cpu.expect_reg8(Reg8::A, 0x85);
+        cpu.expect_flag(Flag::Z, false);
+        cpu.expect_flag(Flag::H, false);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, "DAA");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
+    }
+
+    #[test]
+    fn test_decimal_adjust_accumulator_with_halfcarry_flag() {
+        let inst = &DecimalAdjustAccumulator;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0x12);
+        cpu.set_flag(Flag::H, true);
+        cpu.expect_reg8(Reg8::A, 0x18);
+        cpu.expect_flag(Flag::Z, false);
+        cpu.expect_flag(Flag::H, false);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, "DAA");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
+    }
+
+    #[test]
+    fn test_decimal_adjust_accumulator_with_carry_flag() {
+        let inst = &DecimalAdjustAccumulator;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0x20);
+        cpu.set_flag(Flag::C, true);
+        cpu.expect_reg8(Reg8::A, 0x80);
+        cpu.expect_flag(Flag::Z, false);
+        cpu.expect_flag(Flag::H, false);
+        cpu.expect_flag(Flag::C, true);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, "DAA");
 
         inst.execute(&mut cpu, &mut bus);
         cpu.assert_expectations();
