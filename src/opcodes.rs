@@ -487,10 +487,10 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0xcd */ &Call { condition: None },
     /* 0xce */ &NOP,
     /* 0xcf */ &NOP,
-    /* 0xd0 */ &NOP,
-    /* 0xd1 */ &Return {
+    /* 0xd0 */ &Return {
         condition: Some(Condition::NC),
     },
+    /* 0xd1 */ &NOP,
     /* 0xd2 */ &JumpImmediate {
         condition: Some(Condition::NC),
     },
