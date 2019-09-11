@@ -14,3 +14,5 @@ The way I've been iterating on this is to `cargo run -- path/to/rom`, looking fo
 * https://nnarain.github.io/2016/09/09/Gameboy-LCD-Controller.html
 * https://github.com/nnarain/gameboy/blob/master/docs/gb-programming-manual.pdf
 * https://www.coranac.com/tonc/text/interrupts.htm
+* http://www.z80.info/z80syntx.htm
+* https://youtu.be/B7seNuQncvU
