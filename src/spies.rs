@@ -146,25 +146,49 @@ impl CpuSpy {
         assert_eq!(self.reg16_expectations, self.reg16_changes);
         assert_eq!(self.flag_expectations, self.flag_changes);
 
-        if self.cycles_changed {
-            match self.expected_cycles {
-                None => panic!("unexpected CPU cycle count change"),
-                Some(expected) => assert_eq!(self.cpu.get_cycle_count(), expected),
-            }
+        if self.cycles_changed && self.expected_cycles.is_none() {
+            panic!("unexpected CPU cycle count change");
         }
 
-        if self.stop_changed {
-            match self.expected_stop_change {
-                None => panic!("unexpected CPU stop flag change"),
-                Some(expected) => assert_eq!(self.cpu.get_stopped(), expected),
-            }
+        if !self.cycles_changed && self.expected_cycles.is_some() {
+            panic!(
+                "expected CPU cycle count to be set to {}, but it wasn't touched",
+                self.expected_cycles.unwrap()
+            );
         }
 
-        if self.ime_changed {
-            match self.expected_ime_change {
-                None => panic!("unexpected CPU interrupt master enable flag change"),
-                Some(expected) => assert_eq!(self.cpu.get_ime(), expected),
-            }
+        if self.cycles_changed && self.expected_cycles.is_some() {
+            assert_eq!(self.cpu.get_cycle_count(), self.expected_cycles.unwrap());
+        }
+
+        if self.stop_changed && self.expected_stop_change.is_none() {
+            panic!("unexpected CPU stop flag change");
+        }
+
+        if !self.stop_changed && self.expected_stop_change.is_some() {
+            panic!(
+                "expected CPU stop flag be set to {}, but it wasn't touched",
+                self.expected_stop_change.unwrap()
+            );
+        }
+
+        if self.stop_changed && self.expected_stop_change.is_some() {
+            assert_eq!(self.cpu.get_stopped(), self.expected_stop_change.unwrap());
+        }
+
+        if self.ime_changed && self.expected_ime_change.is_none() {
+            panic!("unexpected CPU interrupt master enable flag change");
+        }
+
+        if !self.ime_changed && self.expected_ime_change.is_some() {
+            panic!(
+                "expected CPU interrupt master enable flag be set to {}, but it wasn't touched",
+                self.expected_ime_change.unwrap()
+            );
+        }
+
+        if self.ime_changed && self.expected_ime_change.is_some() {
+            assert_eq!(self.cpu.get_ime(), self.expected_ime_change.unwrap());
         }
     }
 }

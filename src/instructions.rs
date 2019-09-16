@@ -732,7 +732,8 @@ impl Instruction for DecimalAdjustAccumulator {
         cpu.set_reg8(Reg8::A, accumulator);
         cpu.set_flag(Flag::Z, accumulator == 0);
         cpu.set_flag(Flag::H, false);
-        cpu.set_reg16_offset(Reg16::PC, 1)
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        cpu.increment_cycle_count(4);
     }
 
     fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
