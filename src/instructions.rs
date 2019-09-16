@@ -63,6 +63,22 @@ impl Instruction for Stop {
     }
 }
 
+pub struct SetCarryFlag;
+
+impl Instruction for SetCarryFlag {
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        cpu.set_flag(Flag::N, false);
+        cpu.set_flag(Flag::H, false);
+        cpu.set_flag(Flag::C, true);
+        cpu.increment_cycle_count(4);
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
+        "SCF".to_string()
+    }
+}
+
 pub struct RotateLeftCircularAccumulator;
 
 impl Instruction for RotateLeftCircularAccumulator {
@@ -865,6 +881,29 @@ mod tests {
 
         let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "STOP");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
+    }
+
+    #[test]
+    fn test_set_carry_flag() {
+        let inst = &SetCarryFlag;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.expect_flag(Flag::N, false);
+        cpu.expect_flag(Flag::H, false);
+        cpu.expect_flag(Flag::C, true);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, "SCF");
 
         inst.execute(&mut cpu, &mut bus);
         cpu.assert_expectations();
