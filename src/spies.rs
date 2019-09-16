@@ -158,7 +158,13 @@ impl CpuSpy {
         }
 
         if self.cycles_changed && self.expected_cycles.is_some() {
-            assert_eq!(self.cpu.get_cycle_count(), self.expected_cycles.unwrap());
+            if self.cpu.get_cycle_count() != self.expected_cycles.unwrap() {
+                panic!(
+                    "expected CPU cycle count to be set to {}, but it was set to {}",
+                    self.expected_cycles.unwrap(),
+                    self.cpu.get_cycle_count()
+                );
+            }
         }
 
         if self.stop_changed && self.expected_stop_change.is_none() {
@@ -173,7 +179,13 @@ impl CpuSpy {
         }
 
         if self.stop_changed && self.expected_stop_change.is_some() {
-            assert_eq!(self.cpu.get_stopped(), self.expected_stop_change.unwrap());
+            if self.cpu.get_stopped() != self.expected_stop_change.unwrap() {
+                panic!(
+                    "expected CPU stop flag to be set to {}, but it was set to {}",
+                    self.expected_stop_change.unwrap(),
+                    self.cpu.get_stopped()
+                );
+            }
         }
 
         if self.ime_changed && self.expected_ime_change.is_none() {
@@ -188,7 +200,13 @@ impl CpuSpy {
         }
 
         if self.ime_changed && self.expected_ime_change.is_some() {
-            assert_eq!(self.cpu.get_ime(), self.expected_ime_change.unwrap());
+            if self.cpu.get_ime() != self.expected_ime_change.unwrap() {
+                panic!(
+                    "expected CPU interrupt master enable flag to be set to {}, but it was set to {}",
+                    self.expected_ime_change.unwrap(),
+                    self.cpu.get_ime()
+                );
+            }
         }
     }
 }
