@@ -741,6 +741,22 @@ impl Instruction for DecimalAdjustAccumulator {
     }
 }
 
+pub struct ComplementAccumulator;
+
+impl Instruction for ComplementAccumulator {
+    fn execute(&self, cpu: &mut dyn Compute, _bus: &mut dyn Address) {
+        cpu.set_reg8(Reg8::A, cpu.get_reg8(Reg8::A) ^ 0xff);
+        cpu.set_flag(Flag::N, true);
+        cpu.set_flag(Flag::H, true);
+        cpu.set_reg16_offset(Reg16::PC, 1);
+        cpu.increment_cycle_count(4);
+    }
+
+    fn mnemonic(&self, _addr: u16, _bus: &dyn Address) -> String {
+        "CPL".to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     //! Instruction tests should follow this general format:
@@ -1814,6 +1830,30 @@ mod tests {
 
         let mnemonic = inst.mnemonic(0x0000, &bus);
         assert_eq!(mnemonic, "DAA");
+
+        inst.execute(&mut cpu, &mut bus);
+        cpu.assert_expectations();
+        bus.assert_expectations();
+    }
+
+    #[test]
+    fn test_complement_accumulator() {
+        let inst = &ComplementAccumulator;
+
+        let mut cpu = CpuSpy::wrap(Cpu::reset());
+        cpu.set_reg8(Reg8::A, 0b01010101);
+        cpu.expect_reg8(Reg8::A, 0b10101010);
+        cpu.expect_flag(Flag::N, true);
+        cpu.expect_flag(Flag::H, true);
+        cpu.expect_reg16(Reg16::PC, 0x0001);
+        cpu.expect_cycles(4);
+        cpu.record_changes();
+
+        let mut bus = BusSpy::wrap(FakeBus::new());
+        bus.record_changes();
+
+        let mnemonic = inst.mnemonic(0x0000, &bus);
+        assert_eq!(mnemonic, "CPL");
 
         inst.execute(&mut cpu, &mut bus);
         cpu.assert_expectations();
