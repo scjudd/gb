@@ -83,7 +83,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x2c */ &Increment8Bit { reg: Reg8::L },
     /* 0x2d */ &Decrement8Bit { reg: Reg8::L },
     /* 0x2e */ &Load8BitImmediate { reg: Reg8::L },
-    /* 0x2f */ &NOP,
+    /* 0x2f */ &ComplementAccumulator,
     /* 0x30 */ &JumpRelative {
         condition: Some(Condition::NC),
     },
@@ -98,7 +98,7 @@ pub static OPCODES: [&(dyn Instruction + Sync); 0x100] = [
     /* 0x34 */ &NOP,
     /* 0x35 */ &NOP,
     /* 0x36 */ &NOP,
-    /* 0x37 */ &NOP,
+    /* 0x37 */ &SetCarryFlag,
     /* 0x38 */ &JumpRelative {
         condition: Some(Condition::C),
     },
